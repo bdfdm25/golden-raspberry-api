@@ -49,6 +49,20 @@ describe('MovieRepository', () => {
     expect(repository.findPage({ year: 1800 }, PAGE)).toEqual({ items: [], total: 0 });
   });
 
+  it('keeps the first spelling of a producer and matches the variants to it', () => {
+    repository.insertMany([
+      { year: 1991, title: 'Accented', studios: 'S', producers: ['José Silva'], winner: true },
+      { year: 1992, title: 'Upper', studios: 'S', producers: ['JOSE  SILVA'], winner: true },
+      { year: 1993, title: 'Lower', studios: 'S', producers: ['jose silva'], winner: true },
+    ]);
+
+    expect(repository.findRepeatWinnerYears()).toEqual([
+      { producer: 'José Silva', year: 1991 },
+      { producer: 'José Silva', year: 1992 },
+      { producer: 'José Silva', year: 1993 },
+    ]);
+  });
+
   it('is idempotent for a producer already linked to the same movie', () => {
     repository.insertMany([
       { year: 1990, title: 'Duplicated', studios: 'S', producers: ['Ana', 'Ana'], winner: true },

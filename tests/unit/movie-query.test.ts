@@ -69,8 +69,8 @@ describe('parseMovieQuery', () => {
       const httpError = error as HttpError;
       expect(httpError.status).toBe(400);
       expect(httpError.details).toEqual([
-        { field: 'page', message: expect.any(String) },
-        { field: 'winner', message: expect.any(String) },
+        { field: 'page', message: 'page must be an integer greater than or equal to 1' },
+        { field: 'winner', message: 'winner must be either true or false' },
       ]);
     }
   });
