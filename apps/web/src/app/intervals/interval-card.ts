@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { ProducerAwardInterval } from '../core/movie';
 
+const VISIBLE_ENTRIES = 10;
+
 @Component({
   selector: 'app-interval-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,15 +26,21 @@ import type { ProducerAwardInterval } from '../core/movie';
         </p>
 
         <ul class="mt-6 divide-y divide-line">
-          @for (entry of entries(); track entry.producer + entry.previousWin) {
+          @for (entry of visible(); track entry.producer + entry.previousWin) {
             <li class="py-3 first:pt-0 last:pb-0">
-              <p class="text-[17px] font-semibold">{{ entry.producer }}</p>
+              <p class="text-[17px] font-semibold break-words">{{ entry.producer }}</p>
               <p class="mt-1 font-mono text-xs text-muted tabular-nums">
                 {{ entry.previousWin }} <span class="text-line">———</span> {{ entry.followingWin }}
               </p>
             </li>
           }
         </ul>
+
+        @if (hidden() > 0) {
+          <p class="mt-3 border-t border-line pt-3 font-mono text-xs text-muted">
+            e mais {{ hidden() }} com o mesmo intervalo
+          </p>
+        }
       } @else {
         <p class="mt-4 text-sm text-muted">
           Nenhum produtor premiado mais de uma vez neste conjunto de dados.
@@ -47,6 +55,11 @@ export class IntervalCard {
   readonly accent = input<'brand' | 'accent'>('brand');
 
   protected readonly interval = computed(() => this.entries()[0]?.interval);
+
+  // A synthetic dataset can tie thousands of producers; rendering all of them produced a
+  // 2.9 MB DOM. The count in the header already tells the whole story.
+  protected readonly visible = computed(() => this.entries().slice(0, VISIBLE_ENTRIES));
+  protected readonly hidden = computed(() => Math.max(this.entries().length - VISIBLE_ENTRIES, 0));
   protected readonly accentClass = computed(() =>
     this.accent() === 'brand' ? 'text-brand' : 'text-accent',
   );

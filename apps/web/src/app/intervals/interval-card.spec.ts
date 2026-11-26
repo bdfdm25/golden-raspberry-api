@@ -47,6 +47,21 @@ describe('IntervalCard', () => {
     expect(render([joelSilver]).textContent).not.toContain('empatados');
   });
 
+  it('caps the rendered list and counts what it left out', () => {
+    const many = Array.from({ length: 25 }, (_, index) => ({
+      producer: `Produtor ${String(index).padStart(2, '0')}`,
+      interval: 1,
+      previousWin: 2000 + index,
+      followingWin: 2001 + index,
+    }));
+
+    const element = render(many);
+
+    expect(element.querySelectorAll('li')).toHaveLength(10);
+    expect(element.textContent).toContain('25 empatados');
+    expect(element.textContent).toContain('e mais 15 com o mesmo intervalo');
+  });
+
   it('explains an empty result instead of rendering an empty card', () => {
     const element = render([]);
 

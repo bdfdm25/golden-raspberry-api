@@ -7,9 +7,13 @@ import type { AwardIntervalSummary, Health, MovieFilters, MoviePage } from './mo
 export class MoviesApi {
   private readonly baseUrl = inject(API_BASE_URL);
 
-  health(): HttpResourceRef<Health | undefined> {
-    return httpResource<Health>(() => `${this.baseUrl}/health`);
-  }
+  /**
+   * A single shared resource, not a factory: every consumer reads the same state, one
+   * request serves the whole route, and reloading it refreshes the indicator everywhere.
+   */
+  readonly health: HttpResourceRef<Health | undefined> = httpResource<Health>(
+    () => `${this.baseUrl}/health`,
+  );
 
   awardIntervals(): HttpResourceRef<AwardIntervalSummary | undefined> {
     return httpResource<AwardIntervalSummary>(() => `${this.baseUrl}/producers/intervals`);

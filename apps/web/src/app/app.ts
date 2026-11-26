@@ -11,7 +11,7 @@ import { MoviesApi } from './core/movies-api';
 export class App {
   private readonly api = inject(MoviesApi);
 
-  protected readonly health = this.api.health();
+  protected readonly health = this.api.health;
 
   // resource.value() throws while the resource is in an error state, which is precisely
   // the state this indicator exists to report. hasValue() is the guard.

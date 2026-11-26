@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
+import { MoviesApi } from './core/movies-api';
 import { routes } from './app.routes';
 
 describe('App', () => {
@@ -37,6 +38,19 @@ describe('App', () => {
 
     expect(element().textContent).toContain('API fora');
     expect(element().textContent).not.toContain('filmes');
+  });
+
+  it('recovers the indicator when the shared health resource is reloaded', async () => {
+    http.expectOne('/api/health').flush(null, { status: 503, statusText: 'Unavailable' });
+    await fixture.whenStable();
+    expect(element().textContent).toContain('API fora');
+
+    TestBed.inject(MoviesApi).health.reload();
+    fixture.detectChanges();
+    http.expectOne('/api/health').flush({ status: 'ok', movies: 206 });
+    await fixture.whenStable();
+
+    expect(element().textContent).toContain('API ok');
   });
 
   it('links to both sections', () => {

@@ -30,7 +30,9 @@ import type { Movie } from '../core/movie';
               </td>
               <td class="px-4 py-3 text-right">
                 @if (movie.winner) {
-                  <span class="rounded-full bg-brand/15 px-2.5 py-0.5 font-mono text-xs text-brand">
+                  <span
+                    class="rounded-full bg-brand/15 px-2.5 py-0.5 font-mono text-xs text-brand-ink"
+                  >
                     sim
                   </span>
                 } @else {
