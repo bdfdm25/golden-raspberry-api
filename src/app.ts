@@ -16,7 +16,6 @@ export function createApp({ repository, logger }: AppDependencies): Express {
   const app = express();
 
   app.disable('x-powered-by');
-  app.use(express.json());
   app.use(createRequestLogger(logger));
 
   app.use('/health', createHealthRouter(repository));

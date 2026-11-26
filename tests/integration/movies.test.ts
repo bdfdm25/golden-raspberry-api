@@ -78,6 +78,24 @@ describe('GET /movies', () => {
     );
   });
 
+  it('rejects a query parameter that does not exist instead of ignoring it', async () => {
+    const { body } = await request(testApp.app).get('/movies?yearr=1986').expect(400);
+
+    expect(body.error.details).toContainEqual({
+      field: 'yearr',
+      message: 'yearr is not a supported query parameter',
+    });
+  });
+
+  it('ignores a request body instead of failing on it', async () => {
+    // The API has no write routes, so a malformed body must not turn into a 500.
+    await request(testApp.app)
+      .get('/movies?limit=1')
+      .set('Content-Type', 'application/json')
+      .send('{"broken":')
+      .expect(200);
+  });
+
   it('returns 404 for unknown routes', async () => {
     const { body } = await request(testApp.app).get('/unknown').expect(404);
 

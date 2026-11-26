@@ -34,6 +34,32 @@ describe('parseMovieQuery', () => {
     expect(() => parseMovieQuery(query)).toThrow(HttpError);
   });
 
+  it('rejects parameters that are not part of the contract', () => {
+    try {
+      parseMovieQuery({ yearr: '1986' });
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpError);
+      expect((error as HttpError).details).toEqual([
+        { field: 'yearr', message: 'yearr is not a supported query parameter' },
+      ]);
+    }
+  });
+
+  it.each([
+    [{ page: '0' }, 'page', 'page must be an integer greater than or equal to 1'],
+    [{ limit: '101' }, 'limit', 'limit must be an integer between 1 and 100'],
+    [{ year: '0' }, 'year', 'year must be an integer between 1 and 9999'],
+    [{ winner: 'maybe' }, 'winner', 'winner must be either true or false'],
+  ])('explains the rule of %o instead of the parser wording', (query, field, message) => {
+    try {
+      parseMovieQuery(query);
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as HttpError).details).toEqual([{ field, message }]);
+    }
+  });
+
   it('describes every invalid field', () => {
     try {
       parseMovieQuery({ page: '0', winner: 'maybe' });

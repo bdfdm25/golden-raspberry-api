@@ -83,7 +83,7 @@ components:
       required: [producer, interval, previousWin, followingWin]
       properties:
         producer: { type: string, example: Joel Silver }
-        interval: { type: integer, minimum: 0, example: 1 }
+        interval: { type: integer, minimum: 1, example: 1 }
         previousWin: { type: integer, example: 1990 }
         followingWin: { type: integer, example: 1991 }
     AwardIntervalSummary:
