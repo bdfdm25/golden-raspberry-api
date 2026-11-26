@@ -3,3 +3,5 @@ coverage
 reports
 node_modules
 package-lock.json
+.angular
+apps/web/dist
