@@ -81,7 +81,11 @@ Before declaring any change done: `npm run lint && npm run typecheck && npm run 
 - Angular 22, zoneless, standalone components, signals everywhere. No `zone.js`, no `subscribe`, no
   `async` pipe.
 - Data comes from `httpResource`. **Always guard a read with `hasValue()`**: `resource.value()`
-  throws while the resource is in an error state.
+  throws while the resource is in an error state. `hasValue()` proves there is a value, not that the
+  value has the expected shape: narrow it through `core/movie-guards.ts` before the template, or an
+  unexpected 200 throws inside a computed and freezes the page with the error only in the console.
+- `MoviesApi.health` is a single shared resource, not a factory. Making it a factory again brings
+  back a duplicate request per route and a health badge that never recovers after a retry.
 - Tailwind only, with the design tokens declared as `@theme` in `src/styles.css`. No component
   library, no custom CSS files.
 - Tests use `TestBed` plus `HttpTestingController`, flush-first: create the component, call

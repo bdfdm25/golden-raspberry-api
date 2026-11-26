@@ -51,7 +51,7 @@ Métricas da última execução local:
 | App   | Testes             | Cobertura                                         | Mutação |
 | ----- | ------------------ | ------------------------------------------------- | ------- |
 | `api` | 162 em 20 arquivos | 100% em linhas, funções, branches e statements    | 98,19%  |
-| `web` | 34 em 7 arquivos   | 98,7% statements · 96,6% branches · 95,9% funções | —       |
+| `web` | 39 em 7 arquivos   | 98,1% statements · 95,3% branches · 94,6% funções | —       |
 
 O CI roda quatro jobs: `api`, `web`, `mutation` e `stack`, sendo o último um smoke do
 `docker compose` conferindo que o dashboard é servido e que o proxy alcança a API.
