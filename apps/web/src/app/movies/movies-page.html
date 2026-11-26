@@ -1,0 +1,114 @@
+<section>
+  <h1 class="text-2xl font-semibold tracking-tight">Filmes</h1>
+  <p class="mt-1 text-sm text-muted">
+    Indicados e vencedores carregados do CSV, com filtros e paginação aplicados no servidor.
+  </p>
+</section>
+
+<form class="mt-8 flex flex-wrap items-end gap-3" aria-label="Filtros">
+  <div class="flex flex-col gap-1.5">
+    <label for="year" class="font-mono text-xs tracking-widest text-muted uppercase">Ano</label>
+    <input
+      id="year"
+      inputmode="numeric"
+      placeholder="1986"
+      class="h-10 w-28 rounded-md border border-line bg-canvas px-3 font-mono text-sm tabular-nums placeholder:text-line focus:border-brand focus:ring-2 focus:ring-brand/40 focus:outline-none"
+      [value]="filters().year ?? ''"
+      (change)="applyYear($any($event.target).value)"
+    />
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label for="winner" class="font-mono text-xs tracking-widest text-muted uppercase">
+      Vencedor
+    </label>
+    <select
+      id="winner"
+      class="h-10 w-36 rounded-md border border-line bg-canvas px-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/40 focus:outline-none"
+      (change)="applyWinner($any($event.target).value)"
+    >
+      <option value="" [selected]="filters().winner === undefined">Todos</option>
+      <option value="true" [selected]="filters().winner === true">Somente sim</option>
+      <option value="false" [selected]="filters().winner === false">Somente não</option>
+    </select>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label for="limit" class="font-mono text-xs tracking-widest text-muted uppercase">
+      Por página
+    </label>
+    <select
+      id="limit"
+      class="h-10 w-24 rounded-md border border-line bg-canvas px-3 font-mono text-sm tabular-nums focus:border-brand focus:ring-2 focus:ring-brand/40 focus:outline-none"
+      (change)="applyLimit($any($event.target).value)"
+    >
+      @for (size of pageSizes; track size) {
+        <option [value]="size" [selected]="filters().limit === size">{{ size }}</option>
+      }
+    </select>
+  </div>
+
+  <button
+    type="button"
+    class="h-10 rounded-md border border-line px-4 text-sm font-medium text-muted transition-colors hover:border-brand hover:text-ink focus:ring-2 focus:ring-brand focus:outline-none"
+    (click)="clear()"
+  >
+    Limpar
+  </button>
+</form>
+
+<section class="mt-6" aria-live="polite">
+  @if (errorMessage(); as message) {
+    <app-state-panel
+      tone="danger"
+      title="Não foi possível carregar os filmes"
+      [description]="message"
+      actionLabel="Tentar novamente"
+      (action)="movies.reload()"
+    />
+  } @else if (movies.isLoading()) {
+    <p class="font-mono text-sm text-muted" role="status">carregando filmes...</p>
+  } @else if (isEmpty()) {
+    <app-state-panel
+      title="Nenhum filme encontrado"
+      description="Nenhum filme atende aos filtros atuais. A API respondeu uma coleção vazia com status 200, não um erro."
+      actionLabel="Limpar filtros"
+      (action)="clear()"
+    />
+  } @else if (movies.value(); as page) {
+    <app-movies-table [movies]="page.data" />
+  }
+</section>
+
+@if (pagination(); as pagination) {
+  @if (!errorMessage() && pagination.total > 0) {
+    <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Paginação">
+      <p class="font-mono text-xs text-muted tabular-nums">
+        mostrando <span class="text-ink">{{ range() }}</span> de
+        <span class="text-ink">{{ pagination.total }}</span>
+      </p>
+
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          class="h-9 rounded-md border border-line px-3 font-mono text-xs text-muted transition-colors hover:border-brand hover:text-ink focus:ring-2 focus:ring-brand focus:outline-none disabled:cursor-not-allowed disabled:text-line disabled:hover:border-line"
+          [disabled]="pagination.page <= 1"
+          (click)="goToPage(pagination.page - 1)"
+        >
+          anterior
+        </button>
+        <span class="px-2 font-mono text-xs text-muted tabular-nums">
+          <span class="text-ink">{{ pagination.page }}</span> / {{ pagination.totalPages }}
+        </span>
+        <button
+          type="button"
+          class="h-9 rounded-md border border-line px-3 font-mono text-xs text-muted transition-colors hover:border-brand hover:text-ink focus:ring-2 focus:ring-brand focus:outline-none disabled:cursor-not-allowed disabled:text-line disabled:hover:border-line"
+          [disabled]="pagination.page >= pagination.totalPages"
+          (click)="goToPage(pagination.page + 1)"
+        >
+          próxima
+        </button>
+      </div>
+    </nav>
+  }
+}

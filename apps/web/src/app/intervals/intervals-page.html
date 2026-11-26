@@ -1,0 +1,38 @@
+<section>
+  <h1 class="text-2xl font-semibold tracking-tight">Intervalos entre prêmios</h1>
+  <p class="mt-1 text-sm text-muted">
+    Produtores premiados mais de uma vez em Pior Filme, por intervalo entre prêmios consecutivos.
+  </p>
+</section>
+
+@if (errorMessage(); as message) {
+  <div class="mt-8">
+    <app-state-panel
+      tone="danger"
+      title="Não foi possível carregar os intervalos"
+      [description]="message"
+      actionLabel="Tentar novamente"
+      (action)="reload()"
+    />
+  </div>
+} @else if (intervals.isLoading()) {
+  <p class="mt-8 font-mono text-sm text-muted" role="status">carregando intervalos...</p>
+} @else if (intervals.value(); as summary) {
+  <section class="mt-8 grid gap-4 lg:grid-cols-2" aria-label="Intervalos extremos">
+    <app-interval-card label="Menor intervalo" accent="brand" [entries]="summary.min" />
+    <app-interval-card label="Maior intervalo" accent="accent" [entries]="summary.max" />
+  </section>
+
+  <section class="mt-4 grid gap-4 sm:grid-cols-2" aria-label="Totais do conjunto de dados">
+    <app-stat-card label="Filmes carregados" [value]="movieCount()" />
+    <app-stat-card
+      label="Produtores no resultado"
+      [value]="summary.min.length + summary.max.length"
+    />
+  </section>
+}
+
+<p class="mt-8 font-mono text-xs text-muted">
+  GET /producers/intervals <span class="text-line">·</span> empates retornam todos os produtores,
+  ordenados por nome
+</p>

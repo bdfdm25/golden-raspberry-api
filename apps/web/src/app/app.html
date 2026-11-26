@@ -1,0 +1,41 @@
+<header class="border-b border-line">
+  <div class="mx-auto flex h-16 max-w-7xl items-center gap-8 px-6">
+    <span class="font-mono text-sm font-medium tracking-tight">
+      golden<span class="text-brand">/</span>raspberry
+    </span>
+
+    <nav class="flex items-center gap-1" aria-label="Navegação principal">
+      <a
+        routerLink="/intervals"
+        routerLinkActive="bg-raised text-ink"
+        class="rounded-md px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:text-ink focus:ring-2 focus:ring-brand focus:outline-none"
+      >
+        Intervalos
+      </a>
+      <a
+        routerLink="/movies"
+        routerLinkActive="bg-raised text-ink"
+        class="rounded-md px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:text-ink focus:ring-2 focus:ring-brand focus:outline-none"
+      >
+        Filmes
+      </a>
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2" role="status" aria-live="polite">
+      <span
+        class="size-1.5 rounded-full"
+        [class]="isUp() ? 'bg-ok' : 'bg-danger'"
+        aria-hidden="true"
+      ></span>
+      <span class="font-mono text-xs text-muted">{{ isUp() ? 'API ok' : 'API fora' }}</span>
+      @if (movieCount(); as total) {
+        <span class="font-mono text-xs text-line" aria-hidden="true">|</span>
+        <span class="font-mono text-xs text-muted">{{ total }} filmes</span>
+      }
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-7xl px-6 py-12">
+  <router-outlet />
+</main>
