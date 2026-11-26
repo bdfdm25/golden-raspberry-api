@@ -1,4 +1,8 @@
-import type { ProducerWin } from '../database/movie-repository.js';
+/** One award of one producer, as the repeat-winner query returns it. */
+export interface ProducerWin {
+  producer: string;
+  year: number;
+}
 
 export interface ProducerAwardInterval {
   producer: string;

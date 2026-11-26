@@ -1,14 +1,18 @@
-import type { ParsedMovie } from '../csv/movie-csv-parser.js';
+import type { ProducerWin } from '../producers/award-interval-calculator.js';
 import { normalizeProducerName } from '../producers/producer-identity.js';
 import type { AppDatabase } from './connection.js';
 
-export interface Movie {
-  id: number;
+/** What the repository accepts to store. Structurally satisfied by the CSV parser output. */
+export interface MovieInput {
   year: number;
   title: string;
   studios: string;
   producers: string[];
   winner: boolean;
+}
+
+export interface Movie extends MovieInput {
+  id: number;
 }
 
 export interface MovieFilters {
@@ -24,11 +28,6 @@ export interface PageRequest {
 export interface MoviePage {
   items: Movie[];
   total: number;
-}
-
-export interface ProducerWin {
-  producer: string;
-  year: number;
 }
 
 interface MovieRow {
@@ -67,7 +66,7 @@ const REPEAT_WINNERS_QUERY = `
 export class MovieRepository {
   constructor(private readonly database: AppDatabase) {}
 
-  insertMany(movies: ParsedMovie[]): void {
+  insertMany(movies: MovieInput[]): void {
     const insertMovie = this.database.prepare(
       'INSERT INTO movies (year, title, studios, winner) VALUES (?, ?, ?, ?)',
     );
@@ -95,7 +94,7 @@ export class MovieRepository {
       return id;
     };
 
-    const insertAll = this.database.transaction((batch: ParsedMovie[]) => {
+    const insertAll = this.database.transaction((batch: MovieInput[]) => {
       for (const movie of batch) {
         const { lastInsertRowid } = insertMovie.run(
           movie.year,

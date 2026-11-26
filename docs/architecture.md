@@ -42,7 +42,6 @@ flowchart TD
     http --> domain
     http --> data
     data --> domain
-    domain -. "import type" .-> data
 
     classDef pure fill:#eef7ee,stroke:#5a8f5a
     classDef io fill:#f7f0e8,stroke:#b08050
@@ -51,8 +50,9 @@ flowchart TD
 ```
 
 Verde marca o que é função pura e não toca em I/O; laranja marca o que faz I/O (HTTP, arquivo ou
-banco). A seta pontilhada é a única dependência que aponta para o lado "errado" — está detalhada na
-seção 12. O detalhamento módulo a módulo está na tabela da seção 3.
+banco). Todas as setas apontam para dentro: nenhuma camada conhece quem a chama, e a camada de dados
+depende do domínio (`producer-identity`, `ProducerWin`), nunca o contrário. O detalhamento módulo a
+módulo está na tabela da seção 3.
 
 Duas regras sustentam esse desenho:
 
@@ -336,23 +336,17 @@ de repositório e nenhuma previsão de segunda.
 
 ## 12. Pontos de atenção conhecidos
 
-Nem toda fronteira aqui é perfeita. Os dois pontos que um revisor deve notar:
-
-- **`ProducerWin` mora no módulo do repositório.** O domínio puro importa esse tipo de
-  `database/movie-repository.ts`, o que inverte a direção ideal das dependências. É um `import type`
-  — não gera acoplamento em tempo de execução e desaparece na compilação — e mover o tipo para um
-  módulo neutro criaria um arquivo que só existe para hospedar uma interface de dois campos. A
-  escolha foi consciente: menos indireção, em troca de uma seta de tipo que aponta para o lado
-  errado.
-- **A camada de dados importa o tipo de entrada.** `database/movie-repository.ts` faz
-  `import type { ParsedMovie }` de `csv/movie-csv-parser.ts`. Se amanhã os filmes viessem de uma API
-  em vez de um CSV, o repositório precisaria ser tocado junto. É `import type`, some na compilação e
-  não cria acoplamento em execução; mover o tipo exigiria um módulo que só hospeda uma interface de
-  cinco campos. Mesmo raciocínio do `ProducerWin` acima.
-- **A regra de identidade do produtor é importada pelo repositório.** `producer-identity.ts` é
-  domínio puro e `movie-repository.ts` depende dele em tempo de execução — seta na direção certa
-  (dados dependem de domínio). Vale registrar o porquê de não ser SQL: `COLLATE NOCASE` do SQLite só
-  cobre ASCII e não resolveria acentos.
+- **Os tipos compartilhados pertencem a quem define o conceito, não a quem consulta.**
+  `ProducerWin` é declarado em `producers/award-interval-calculator.ts` e o repositório o importa;
+  o repositório declara `MovieInput`, que é o que ele aceita gravar, e a saída do parser de CSV o
+  satisfaz estruturalmente, sem mapper. Foi assim que as duas setas invertidas que existiam aqui
+  (`data → csv` e `domain → data`) deixaram de existir, sem criar módulo nenhum.
+- **A identidade do produtor é normalizada na ingestão, não no SQL.** `producer-identity.ts` é
+  domínio puro e `movie-repository.ts` depende dele em tempo de execução. O motivo de não ser
+  `COLLATE NOCASE`: a collation do SQLite só cobre ASCII e não resolveria acentos.
+- **A separação de produtores por `and` divide nomes creditados em conjunto.** O dataset fornecido
+  tem uma linha assim; o limite está documentado na regra 1 do README e fixado por teste. Dividir
+  continua sendo o comportamento certo nas outras 133 linhas que usam `and` como separador.
 - **O banco em memória não escala horizontalmente.** Cada processo carrega sua própria cópia do CSV.
   É adequado ao requisito (banco embarcado, dados estáticos, leitura apenas) e seria inadequado para
   qualquer cenário de escrita. Trocar para um SQLite em arquivo ou outro SGBD exigiria mexer em um
