@@ -196,6 +196,9 @@ cada produtor com mais de um prêmio (uma única query SQL com CTE), e o domíni
 sem I/O — calcula os intervalos. Isso mantém a regra de negócio testável sem banco e o SQL
 responsável apenas por filtrar e ordenar.
 
+Diagramas das camadas, do modelo de dados e do fluxo de chamadas de cada endpoint estão em
+[`docs/architecture.md`](./docs/architecture.md).
+
 ## Observabilidade
 
 - Log estruturado JSON (pino) com `requestId`, método, rota, status e duração em milissegundos.

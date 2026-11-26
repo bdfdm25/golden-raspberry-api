@@ -32,7 +32,8 @@ Before declaring any change done: `npm run lint && npm run typecheck && npm run 
 - Functions stay small and flat: ESLint enforces complexity 8, max depth 3, max 60 lines.
 - Comments explain _why_, never _what_. Delete a comment instead of restating the code.
 - Business rules live in pure functions (`src/producers`, `src/csv`); I/O stays in
-  `src/database` and `src/ingestion`. Do not mix the two.
+  `src/database` and `src/ingestion`. Do not mix the two. `docs/architecture.md` has the layer
+  diagram and the per-endpoint call flow; keep it in sync when a boundary moves.
 - Errors reaching the client go through `HttpError`; anything else becomes a 500 and is logged.
 
 ## Testing rules
