@@ -25,59 +25,33 @@ DI e sem decorators.
 
 ```mermaid
 flowchart TD
-    subgraph bootstrap["Bootstrap"]
-        main["main.ts<br/><i>composition root</i>"]
-        env["config/env.ts<br/><i>loadConfig (zod)</i>"]
-        server["server.ts<br/><i>startServer</i>"]
-    end
+    main["main.ts<br/><i>composition root: config, logger, sinais do SO</i>"]
+    server["server.ts<br/><i>startServer: monta o grafo e abre a porta</i>"]
+    http["Borda HTTP<br/>app.ts · producers-router · movies-router<br/>health-router · movie-query · request-logger · error-handler"]
+    domain["Domínio puro<br/>award-interval-calculator"]
+    ingestion["Ingestão<br/>movie-ingestion"]
+    csv["Parsing de CSV<br/>movie-csv-parser · csv-line-splitter · producer-parser"]
+    data["Acesso a dados<br/>connection · MovieRepository"]
 
-    subgraph http["Borda HTTP"]
-        app["app.ts<br/><i>createApp</i>"]
-        reqlog["shared/request-logger.ts"]
-        producers["producers/producers-router.ts"]
-        movies["movies/movies-router.ts"]
-        health["health/health-router.ts"]
-        query["movies/movie-query.ts<br/><i>parseMovieQuery (zod)</i>"]
-        errh["shared/error-handler.ts<br/><i>notFound + errorHandler</i>"]
-    end
-
-    subgraph domain["Domínio puro"]
-        calc["producers/award-interval-calculator.ts<br/><i>calculateAwardIntervals</i>"]
-    end
-
-    subgraph data["Acesso a dados"]
-        repo["database/movie-repository.ts<br/><i>MovieRepository</i>"]
-        conn["database/connection.ts<br/><i>createInMemoryDatabase</i>"]
-    end
-
-    subgraph ingest["Ingestão"]
-        ingestion["ingestion/movie-ingestion.ts"]
-        parser["csv/movie-csv-parser.ts"]
-        splitter["csv/csv-line-splitter.ts"]
-        prodparser["csv/producer-parser.ts"]
-    end
-
-    main --> env
     main --> server
-    server --> conn
-    server --> repo
     server --> ingestion
-    server --> app
-    app --> reqlog
-    app --> producers
-    app --> movies
-    app --> health
-    app --> errh
-    producers --> calc
-    producers --> repo
-    movies --> query
-    movies --> repo
-    health --> repo
-    ingestion --> parser
-    ingestion --> repo
-    parser --> splitter
-    parser --> prodparser
+    server --> http
+    server --> data
+    ingestion --> csv
+    ingestion --> data
+    http --> domain
+    http --> data
+    domain -. "import type" .-> data
+
+    classDef pure fill:#eef7ee,stroke:#5a8f5a
+    classDef io fill:#f7f0e8,stroke:#b08050
+    class domain,csv pure
+    class http,ingestion,data io
 ```
+
+Verde marca o que é função pura e não toca em I/O; laranja marca o que faz I/O (HTTP, arquivo ou
+banco). A seta pontilhada é a única dependência que aponta para o lado "errado" — está detalhada na
+seção 12. O detalhamento módulo a módulo está na tabela da seção 3.
 
 Duas regras sustentam esse desenho:
 
@@ -207,7 +181,7 @@ sequenceDiagram
     Repo-->>R: ProducerWin[]
     R->>Calc: calculateAwardIntervals(wins)
     Calc->>Calc: agrupa por produtor, deduplica anos, ordena
-    Calc->>Calc: intervalos consecutivos; filtra min e max
+    Calc->>Calc: intervalos consecutivos, filtra min e max
     Calc-->>R: { min: [...], max: [...] }
     R-->>C: 200 application/json
     RL->>RL: on('finish') loga status e durationMs
