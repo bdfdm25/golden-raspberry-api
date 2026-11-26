@@ -264,3 +264,55 @@ npm test              → 160 testes, 19 arquivos
 npm run test:coverage → 100% linhas, 100% funções, 100% branches
 npm run test:mutation → 98,37% (era 97,86%)
 ```
+
+## 13. Auditoria de boas práticas de Node
+
+Antes de abrir a frente de frontend, a API passou por uma auditoria focada em práticas consolidadas
+de Node e TypeScript. O achado mais grave foi reproduzido antes de virar correção:
+
+```
+npm ci --omit=dev && node dist/main.js
+→ Error: unable to determine transport target for "pino-pretty"
+```
+
+`NODE_ENV` tinha default `development`, o que liga o transport `pino-pretty` — que é
+`devDependency`. Qualquer instalação de produção morria na primeira linha de log, e o CI nunca
+pegaria porque instala tudo. A correção escolhida foi inverter o default para `production` e deixar
+`npm run dev` declarar `development`: default inseguro era a causa, mover a dependência seria tratar
+o sintoma.
+
+Como o projeto é executado localmente por quem avalia, e não implantado, os achados puramente de
+produção foram descartados de propósito: `helmet`, timeouts de socket, `/health/live` versus
+`/health/ready`, limite superior de `page`, validação de tamanho do `x-request-id` e `permissions`
+no workflow. Ficaram os que afetam quem roda local ou quem lê o código.
+
+### Aplicado
+
+| Correção                                                             | Motivo                                                                                        |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `NODE_ENV` com default `production` e `dev` declarando `development` | instalação sem devDependencies voltou a subir                                                 |
+| `--env-file-if-exists=.env` em `start` e `dev`                       | `.env.example` era citado no README e nada lia `.env`                                         |
+| `.nvmrc` e `packageManager`                                          | quem clona passa a ter a versão de Node declarada                                             |
+| `@types/node` alinhado ao `engines` (22)                             | tipava APIs que o runtime não tem                                                             |
+| `"private": true`                                                    | evita publicação acidental                                                                    |
+| Shutdown com `catch`, deadline de 10 s e `closeIdleConnections()`    | `Ctrl+C` deixa de depender de keep-alive e falha de close deixa de virar rejeição não tratada |
+| `uncaughtException` e `unhandledRejection` logados e com saída 1     | a falha final para de sair como stack cru fora do log estruturado                             |
+| `requestId` na linha de erro do 500                                  | correlaciona as duas pontas da mesma requisição                                               |
+| Requisição abortada passa a gerar log (`aborted: true`)              | antes, cliente que desistia não deixava rastro                                                |
+| `smoke.sh` manda `SIGTERM` e exige saída 0                           | o caminho de shutdown não era verificado por teste nenhum                                     |
+| Thresholds para 100% de cobertura e 95% de mutação                   | a folga de 8 pontos escondia regressão silenciosa                                             |
+
+### Recusado, com motivo
+
+A auditoria pedia guardas de `undefined` nos retornos do driver (`as { id: number }`). Recusado:
+`SELECT COUNT(*)` e `INSERT ... RETURNING id` sempre produzem linha, então a guarda seria código
+inalcançável — exatamente o que o teste de mutação nos fez apagar na seção 4. Também foi recusada a
+alegação de perda de log no `process.exit`: testado nos dois modos de logger, a linha
+`shutting down` é gravada.
+
+```
+npm test              → 162 testes, 20 arquivos
+npm run test:coverage → 100% em linhas, funções, branches e statements
+npm run test:mutation → 98,19% (threshold 95)
+npm run smoke         → smoke: ok, com shutdown verificado
+```

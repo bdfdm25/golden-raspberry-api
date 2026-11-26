@@ -19,6 +19,7 @@ matter more than feature count.
 | Coverage    | `npm run test:coverage` |
 | Mutation    | `npm run test:mutation` |
 | Smoke       | `npm run smoke`         |
+| Node        | 22.9+ (`.nvmrc`)        |
 | Lint        | `npm run lint`          |
 | Types       | `npm run typecheck`     |
 
@@ -34,7 +35,10 @@ Before declaring any change done: `npm run lint && npm run typecheck && npm run 
 - Business rules live in pure functions (`src/producers`, `src/csv`); I/O stays in
   `src/database` and `src/ingestion`. Do not mix the two. `docs/architecture.md` has the layer
   diagram and the per-endpoint call flow; keep it in sync when a boundary moves.
-- Errors reaching the client go through `HttpError`; anything else becomes a 500 and is logged.
+- Errors reaching the client go through `HttpError`; anything else becomes a 500 and is logged with
+  the request id taken from the `x-request-id` response header.
+- `NODE_ENV` defaults to `production` on purpose: the pretty log transport is a dev dependency, so a
+  production install must never take the branch that loads it. `npm run dev` sets `development`.
 - Producer identity is decided by `normalizeProducerName` (`src/producers/producer-identity.ts`), not
   by SQL collation: SQLite's `COLLATE NOCASE` is ASCII-only. Stored `name` is the first spelling
   seen and is what the API returns; `normalized_name` only matches duplicates.

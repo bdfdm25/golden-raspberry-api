@@ -20,7 +20,7 @@ os intervalos entre prêmios consecutivos de cada produtor.
 
 ## Como rodar
 
-Pré-requisitos: Node.js 22 ou superior e npm. O CI roda no Node 22.
+Pré-requisitos: Node.js 22.9 ou superior e npm (veja `.nvmrc`). O CI roda no Node 22.
 
 ```bash
 npm ci          # instala as dependências
@@ -42,18 +42,21 @@ que a API nunca responda com base em dados parcialmente carregados.
 
 Todas são opcionais (veja `.env.example`):
 
-| Variável    | Padrão                 | Descrição                                               |
-| ----------- | ---------------------- | ------------------------------------------------------- |
-| `PORT`      | `3000`                 | Porta HTTP. `0` solicita uma porta efêmera ao SO.       |
-| `NODE_ENV`  | `development`          | Em `development` os logs saem formatados (pino-pretty). |
-| `LOG_LEVEL` | `info`                 | Nível do logger.                                        |
-| `CSV_PATH`  | `./data/Movielist.csv` | Arquivo CSV carregado na inicialização.                 |
+| Variável    | Padrão                 | Descrição                                                    |
+| ----------- | ---------------------- | ------------------------------------------------------------ |
+| `PORT`      | `3000`                 | Porta HTTP. `0` solicita uma porta efêmera ao SO.            |
+| `NODE_ENV`  | `production`           | `development` formata os logs (pino-pretty, dev dependency). |
+| `LOG_LEVEL` | `info`                 | Nível do logger.                                             |
+| `CSV_PATH`  | `./data/Movielist.csv` | Arquivo CSV carregado na inicialização.                      |
 
 Para executar com outro conjunto de dados, basta apontar `CSV_PATH`:
 
 ```bash
 CSV_PATH=/caminho/para/outro.csv npm start
 ```
+
+`npm start` e `npm run dev` também carregam um arquivo `.env` da raiz, se existir
+(`--env-file-if-exists`). Copie `.env.example` para `.env` e ajuste o que precisar.
 
 ## Endpoints
 
@@ -203,8 +206,8 @@ pegam defeitos — não para substituir a camada exigida.
 npm test                  # toda a suíte (unitários + integração)
 npm run test:unit         # apenas unitários
 npm run test:integration   # apenas integração
-npm run test:coverage     # cobertura com threshold de 90%
-npm run test:mutation     # teste de mutação (Stryker), threshold de 90%
+npm run test:coverage     # cobertura com threshold de 100%
+npm run test:mutation     # teste de mutação (Stryker), threshold de 95%
 npm run smoke             # sobe o dist/ compilado e valida os endpoints via HTTP real
 ```
 
@@ -213,10 +216,10 @@ Resultado da última execução local (reproduza com `npm run test:coverage` e
 
 | Métrica                    | Resultado         |
 | -------------------------- | ----------------- |
-| Testes                     | 160 (19 arquivos) |
+| Testes                     | 162 (20 arquivos) |
 | Cobertura (linhas/funções) | 100%              |
 | Cobertura (branches)       | 100%              |
-| Mutation score             | 98,37%            |
+| Mutation score             | 98,19%            |
 
 - **Integração** sobe a aplicação real (Express + SQLite em memória) e valida as respostas HTTP, com
   o `Movielist.csv` fornecido e com datasets sintéticos: empates em `min` e `max`, produtor com um
@@ -272,9 +275,14 @@ Diagramas das camadas, do modelo de dados e do fluxo de chamadas de cada endpoin
 
 ## Observabilidade
 
-- Log estruturado JSON (pino) com `requestId`, método, rota, status e duração em milissegundos.
+- Log estruturado JSON (pino) com `requestId`, método, rota, status, duração em milissegundos e
+  `aborted` quando o cliente desiste antes da resposta.
 - O header `x-request-id` é aceito e ecoado; quando ausente, um UUID é gerado.
 - `GET /health` expõe o estado da aplicação e quantos filmes foram carregados.
+- Erro inesperado vira `500` genérico para o cliente e linha `error` no log com o mesmo
+  `requestId`, o que permite correlacionar as duas pontas.
+- `SIGINT` e `SIGTERM` drenam o servidor antes de sair; `unhandledRejection` e `uncaughtException`
+  saem com código 1 pelo log estruturado, não por stack solto no stderr.
 
 ## Uso de IA
 
