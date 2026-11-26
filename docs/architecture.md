@@ -28,7 +28,7 @@ flowchart TD
     main["main.ts<br/><i>composition root: config, logger, sinais do SO</i>"]
     server["server.ts<br/><i>startServer: monta o grafo e abre a porta</i>"]
     http["Borda HTTP<br/>app.ts · producers-router · movies-router<br/>health-router · movie-query · request-logger · error-handler"]
-    domain["Domínio puro<br/>award-interval-calculator"]
+    domain["Domínio puro<br/>award-interval-calculator · producer-identity"]
     ingestion["Ingestão<br/>movie-ingestion"]
     csv["Parsing de CSV<br/>movie-csv-parser · csv-line-splitter · producer-parser"]
     data["Acesso a dados<br/>connection · MovieRepository"]
@@ -41,6 +41,7 @@ flowchart TD
     ingestion --> data
     http --> domain
     http --> data
+    data --> domain
     domain -. "import type" .-> data
 
     classDef pure fill:#eef7ee,stroke:#5a8f5a
@@ -77,6 +78,7 @@ Duas regras sustentam esse desenho:
 | `csv/csv-line-splitter.ts`               | Split de uma linha respeitando aspas duplas e aspas escapadas          |
 | `csv/producer-parser.ts`                 | Separa a célula de produtores em `,`, `and` e `&`                      |
 | `producers/award-interval-calculator.ts` | Regra de negócio: intervalos consecutivos, mínimos e máximos empatados |
+| `producers/producer-identity.ts`         | Chave que decide se dois textos nomeiam o mesmo produtor               |
 | `producers/producers-router.ts`          | Rota `/producers/intervals`                                            |
 | `movies/movie-query.ts`                  | Valida query params e traduz falha em `HttpError` 400                  |
 | `movies/movies-router.ts`                | Rota `/movies` com paginação e filtros                                 |
@@ -99,7 +101,8 @@ erDiagram
     }
     producers {
         INTEGER id PK
-        TEXT name UK
+        TEXT name "grafia exibida"
+        TEXT normalized_name UK
     }
     movie_producers {
         INTEGER movie_id FK
@@ -341,6 +344,15 @@ Nem toda fronteira aqui é perfeita. Os dois pontos que um revisor deve notar:
   módulo neutro criaria um arquivo que só existe para hospedar uma interface de dois campos. A
   escolha foi consciente: menos indireção, em troca de uma seta de tipo que aponta para o lado
   errado.
+- **A camada de dados importa o tipo de entrada.** `database/movie-repository.ts` faz
+  `import type { ParsedMovie }` de `csv/movie-csv-parser.ts`. Se amanhã os filmes viessem de uma API
+  em vez de um CSV, o repositório precisaria ser tocado junto. É `import type`, some na compilação e
+  não cria acoplamento em execução; mover o tipo exigiria um módulo que só hospeda uma interface de
+  cinco campos. Mesmo raciocínio do `ProducerWin` acima.
+- **A regra de identidade do produtor é importada pelo repositório.** `producer-identity.ts` é
+  domínio puro e `movie-repository.ts` depende dele em tempo de execução — seta na direção certa
+  (dados dependem de domínio). Vale registrar o porquê de não ser SQL: `COLLATE NOCASE` do SQLite só
+  cobre ASCII e não resolveria acentos.
 - **O banco em memória não escala horizontalmente.** Cada processo carrega sua própria cópia do CSV.
   É adequado ao requisito (banco embarcado, dados estáticos, leitura apenas) e seria inadequado para
   qualquer cenário de escrita. Trocar para um SQLite em arquivo ou outro SGBD exigiria mexer em um

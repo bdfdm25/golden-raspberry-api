@@ -1,5 +1,7 @@
 # Golden Raspberry Awards API
 
+[![CI](https://github.com/bdfdm25/golden-raspberry-api/actions/workflows/ci.yml/badge.svg)](https://github.com/bdfdm25/golden-raspberry-api/actions/workflows/ci.yml)
+
 API RESTful que lê a lista de indicados e vencedores da categoria **Pior Filme** do Golden Raspberry
 Awards a partir de um arquivo CSV, carrega os dados em um banco em memória na inicialização e expõe
 os intervalos entre prêmios consecutivos de cada produtor.
@@ -8,7 +10,7 @@ os intervalos entre prêmios consecutivos de cada produtor.
 
 | Item      | Escolha                              | Motivo                                                    |
 | --------- | ------------------------------------ | --------------------------------------------------------- |
-| Runtime   | Node.js 20+ / TypeScript             | `strict` + `exactOptionalPropertyTypes` ligados.          |
+| Runtime   | Node.js 22+ / TypeScript             | `strict` + `exactOptionalPropertyTypes` ligados.          |
 | HTTP      | Express 5                            | Nível 2 de Richardson sem camadas desnecessárias.         |
 | Banco     | SQLite em memória (`better-sqlite3`) | SGBD embarcado, zero instalação externa.                  |
 | Validação | zod                                  | Validação de ambiente e de query params em um só lugar.   |
@@ -18,7 +20,7 @@ os intervalos entre prêmios consecutivos de cada produtor.
 
 ## Como rodar
 
-Pré-requisitos: Node.js 20 ou superior (testado no Node 25) e npm.
+Pré-requisitos: Node.js 22 ou superior e npm. O CI roda no Node 22.
 
 ```bash
 npm ci          # instala as dependências
@@ -68,10 +70,10 @@ Resultado da última execução local:
 
 | Métrica                    | Resultado         |
 | -------------------------- | ----------------- |
-| Testes                     | 132 (17 arquivos) |
+| Testes                     | 151 (19 arquivos) |
 | Cobertura (linhas/funções) | 100%              |
-| Cobertura (branches)       | 99,27%            |
-| Mutation score             | 98,54%            |
+| Cobertura (branches)       | 99,31%            |
+| Mutation score             | 97,86%            |
 
 Os testes de integração sobem a aplicação real (Express + SQLite) e validam as respostas HTTP —
 inclusive com o `Movielist.csv` fornecido e com datasets sintéticos que cobrem empates, produtores
@@ -122,11 +124,19 @@ curl "http://localhost:3000/movies?year=1986&winner=true"
 {
   "data": [
     {
-      "id": 25,
+      "id": 36,
       "year": 1986,
       "title": "Howard the Duck",
       "studios": "Universal Studios",
       "producers": ["Gloria Katz"],
+      "winner": true
+    },
+    {
+      "id": 37,
+      "year": 1986,
+      "title": "Under the Cherry Moon",
+      "studios": "Warner Bros.",
+      "producers": ["Bob Cavallo", "Joe Ruffalo", "Steve Fargnoli"],
       "winner": true
     }
   ],
@@ -142,13 +152,14 @@ curl "http://localhost:3000/movies?year=1986&winner=true"
 
 ### Erros
 
-Parâmetros inválidos retornam `400`; rotas inexistentes retornam `404`. Formato:
+Parâmetros inválidos retornam `400`; rotas inexistentes retornam `404`. Um parâmetro que não existe
+no contrato também é recusado, em vez de ignorado — `?yearr=1986` não devolve a lista inteira.
 
 ```json
 {
   "error": {
     "message": "Invalid query parameters",
-    "details": [{ "field": "limit", "message": "Too big: expected number to be <=100" }]
+    "details": [{ "field": "limit", "message": "limit must be an integer between 1 and 100" }]
   }
 }
 ```
@@ -166,13 +177,21 @@ com `additionalProperties: false`. Campo a mais, campo a menos ou tipo trocado q
 ## Regras de negócio
 
 1. **Produtores** são extraídos da coluna `producers` separando por `,`, `and` e `&`
-   (`"Bob Cavallo, Joe Ruffalo and Steve Fargnoli"` → três produtores).
+   (`"Bob Cavallo, Joe Ruffalo and Steve Fargnoli"` → três produtores). Cada coprodutor recebe o
+   prêmio individualmente — é o que faz Joel Silver somar 1990 (`"Steven Perry and Joel Silver"`) e
+   1991 (`"Joel Silver"`). **Limite conhecido:** um nome creditado em conjunto também é dividido.
+   O dataset fornecido tem uma linha assim (`"Sid and Marty Krofft and Jimmy Miller"`, que vira
+   `Sid`, `Marty Krofft` e `Jimmy Miller`); como o texto não distingue os dois casos, a divisão é
+   mantida, que é o comportamento correto nas 133 linhas restantes.
 2. Apenas filmes com `winner = yes` contam como prêmio; indicações são ignoradas.
 3. Anos repetidos para o mesmo produtor são deduplicados — dois prêmios no mesmo ano não geram um
    intervalo de zero.
 4. Produtores com um único prêmio não aparecem no resultado.
 5. Os intervalos são sempre entre prêmios **consecutivos**, não entre o primeiro e o último.
 6. `min` e `max` retornam todos os produtores empatados, ordenados por nome.
+7. **Identidade do produtor** ignora caixa, acentos e espaços repetidos: `"José  Silva"`,
+   `"JOSE SILVA"` e `"jose silva"` são o mesmo produtor. A grafia devolvida nas respostas é a
+   primeira que apareceu no CSV, nunca a forma normalizada.
 
 ## Arquitetura
 

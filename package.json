@@ -4,7 +4,7 @@
   "description": "RESTful API for Golden Raspberry Awards Worst Picture nominees and winners",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "tsx watch src/main.ts",

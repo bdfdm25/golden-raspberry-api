@@ -148,3 +148,51 @@ npm run smoke         → smoke: ok (dist/ compilado, endpoints por HTTP real)
 
 Além disso, a API compilada foi executada e validada manualmente via `curl`
 (`/producers/intervals`, `/movies`, `/health` e um caso de erro 400).
+
+## 9. Council de revisão e os defeitos que ele encontrou
+
+Antes de fechar a entrega, a solução passou por uma revisão multiperspectiva com seis avaliadores
+independentes (pragmático, cético, arquiteto, advogado do usuário, advogado do diabo e estrategista),
+seguida de uma rodada em que cada um revisou a posição de outro. **Nenhuma alegação foi aceita sem
+reprodução:** cada achado abaixo foi confirmado rodando o código antes de virar correção.
+
+| Achado                                                            | Verificação                                                | Correção                                                   |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
+| Métricas do README divergiam de `docs/ai-interactions.md`         | coverage e Stryker executados: 99,31% e 97,86%             | README corrigido; passou a citar a execução real           |
+| Exemplo de `/movies` mostrava um id inexistente                   | `curl` documentado devolve os ids 36 e 37                  | exemplo substituído pela resposta real, com os dois filmes |
+| Corpo JSON malformado devolvia 500                                | reproduzido em `GET` e `POST`                              | `express.json()` removido: a API não tem rota de escrita   |
+| `?yearr=1986` respondia 200 com a lista inteira                   | reproduzido                                                | `.strict()` no schema de query, com teste                  |
+| Variação de caixa no nome do produtor zerava `min`/`max`          | CSV sintético com `di`/`Di` devolvia `{"min":[],"max":[]}` | chave de identidade normalizada na ingestão                |
+| Mensagem de erro vazava o texto interno do zod                    | `?page=abc` → `"expected number, received NaN"`            | mensagem por campo, exaustiva em tempo de compilação       |
+| `openapi.yaml` admitia `interval: 0`, impossível na implementação | regra 3 do README já decidia o contrário                   | `minimum: 1` no contrato                                   |
+
+### O que foi recusado, e por quê
+
+- **Remover `and` da separação de produtores.** Medido: 133 das 206 linhas usam `and` como
+  separador; sem ele, os produtores vencedores caem de 94 para 70, os com dois prêmios caem de 4
+  para 2 e `min` muda de Joel Silver (1 ano) para Bo Derek (6). O prêmio de 1990 de Joel Silver vem
+  justamente de `"Steven Perry and Joel Silver"`.
+- **Propagar sobrenome em `"Sid and Marty Krofft"`.** Consertaria o único caso do dataset, mas
+  produziria `"Madonna Penn"` a partir de `"Madonna and Sean Penn"`. Erro visível (`Sid`,
+  claramente incompleto) é preferível a erro plausível.
+- **Dockerfile.** `npm ci && npm start` resolve; o banco é em memória.
+
+### O teste que não testava nada
+
+O caso `"Alexander Sandro"` prometia cobrir "nomes que contêm `and`", mas a regra usa fronteira de
+palavra: "Alexander" jamais poderia ser dividido, então o teste não podia falhar. Foi renomeado para
+o que de fato verifica e acompanhado de um teste que assere o comportamento **errado** de propósito
+(`"Sid and Marty Krofft"` → `Sid`, `Marty Krofft`), para que qualquer mudança futura na regra quebre
+a suíte conscientemente. No mesmo movimento entrou `tests/integration/dataset-regression.test.ts`,
+que fixa os quatro produtores com dois prêmios do dataset fornecido.
+
+## 10. Verificação após as correções
+
+```
+npm run lint          → sem erros
+npm run typecheck     → sem erros
+npm test              → 151 testes, 19 arquivos, todos passando
+npm run test:coverage → 100% linhas, 100% funções, 99,31% branches
+npm run test:mutation → 97,86% (threshold 90%), 8 sobreviventes equivalentes
+npm run smoke         → smoke: ok
+```

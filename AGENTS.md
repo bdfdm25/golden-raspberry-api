@@ -35,6 +35,11 @@ Before declaring any change done: `npm run lint && npm run typecheck && npm run 
   `src/database` and `src/ingestion`. Do not mix the two. `docs/architecture.md` has the layer
   diagram and the per-endpoint call flow; keep it in sync when a boundary moves.
 - Errors reaching the client go through `HttpError`; anything else becomes a 500 and is logged.
+- Producer identity is decided by `normalizeProducerName` (`src/producers/producer-identity.ts`), not
+  by SQL collation: SQLite's `COLLATE NOCASE` is ASCII-only. Stored `name` is the first spelling
+  seen and is what the API returns; `normalized_name` only matches duplicates.
+- The query schema is strict on purpose. An unknown query parameter is a 400, never a silent
+  full-collection response.
 
 ## Testing rules
 
