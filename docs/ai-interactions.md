@@ -226,7 +226,7 @@ npm run test:mutation → 97,86% (threshold 90)
 
 ## 12. Revisão final contra datasets diferentes
 
-O enunciado avisa que outros conjuntos de dados serão usados na avaliação. Para medir isso em vez de
+Os requisitos avisam que outros conjuntos de dados serão usados. Para medir isso em vez de
 supor, foram gerados 30 CSVs de borda e dois de volume (10 mil e 100 mil linhas), todos fora do
 repositório, e cada um foi carregado pelo pipeline real.
 
@@ -281,7 +281,7 @@ pegaria porque instala tudo. A correção escolhida foi inverter o default para 
 `npm run dev` declarar `development`: default inseguro era a causa, mover a dependência seria tratar
 o sintoma.
 
-Como o projeto é executado localmente por quem avalia, e não implantado, os achados puramente de
+Como o projeto é executado localmente, e não implantado, os achados puramente de
 produção foram descartados de propósito: `helmet`, timeouts de socket, `/health/live` versus
 `/health/ready`, limite superior de `page`, validação de tamanho do `x-request-id` e `permissions`
 no workflow. Ficaram os que afetam quem roda local ou quem lê o código.

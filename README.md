@@ -6,6 +6,11 @@ API RESTful que lê a lista de indicados e vencedores da categoria **Pior Filme*
 Awards a partir de um arquivo CSV, carrega os dados em um banco em memória na inicialização e expõe
 os intervalos entre prêmios consecutivos de cada produtor.
 
+Há também uma versão fullstack deste projeto na branch
+[`feat/fullstack-dashboard`](https://github.com/bdfdm25/golden-raspberry-api/tree/feat/fullstack-dashboard):
+a mesma API em `apps/api` mais um dashboard Angular em `apps/web`, com `docker compose up` subindo
+os dois.
+
 ## Stack
 
 | Item      | Escolha                              | Motivo                                                                   |
@@ -198,7 +203,8 @@ linhas não são suportados.
 
 ## Testes
 
-O desafio pede apenas testes de integração. Unitários e mutação entraram por decisão de projeto,
+Os requisitos pedem apenas testes de integração. Unitários e mutação entraram por decisão de
+projeto,
 para cobrir o que o teste HTTP alcança só de forma indireta e para medir se as asserções realmente
 pegam defeitos — não para substituir a camada exigida.
 
