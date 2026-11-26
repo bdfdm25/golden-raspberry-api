@@ -32,6 +32,8 @@ describe('MoviesPage', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(MoviesPage);
     fixture.detectChanges();
+    // MoviesApi exposes a single shared health resource, so every page triggers it.
+    http.expectOne('/api/health').flush({ status: 'ok', movies: 206 });
   });
 
   function element(): HTMLElement {
@@ -57,6 +59,13 @@ describe('MoviesPage', () => {
     expect(request.params.get('limit')).toBe('20');
     expect(request.params.has('year')).toBe(false);
     expect(request.params.has('winner')).toBe(false);
+  });
+
+  it('shows the loading state while the request is pending', () => {
+    expectMoviesRequest();
+
+    expect(element().textContent).toContain('carregando filmes');
+    expect(element().textContent).not.toContain('Nenhum filme encontrado');
   });
 
   it('renders the returned movies and the range', async () => {
@@ -169,6 +178,26 @@ describe('MoviesPage', () => {
 
     expect(element().textContent).toContain('Nenhum filme encontrado');
     expect(element().querySelector('table')).toBeNull();
+  });
+
+  it('reports an unexpected payload instead of freezing on the loading state', async () => {
+    expectMoviesRequest().flush({ unexpected: 'shape', items: [] });
+    await fixture.whenStable();
+
+    expect(element().textContent).toContain('formato que este painel não reconhece');
+    expect(element().textContent).not.toContain('carregando filmes');
+    expect(element().querySelector('table')).toBeNull();
+  });
+
+  it('never sends a non-numeric year to the API', async () => {
+    expectMoviesRequest().flush(pageWith());
+    await fixture.whenStable();
+
+    await change('#year', 'abc');
+
+    const pending = expectMoviesRequest();
+    expect(pending.request.params.has('year')).toBe(false);
+    pending.flush(pageWith());
   });
 
   it('shows the parameter the API rejected', async () => {

@@ -60,6 +60,8 @@ describe('IntervalsPage', () => {
     element().querySelector('button')?.click();
     fixture.detectChanges();
     http.expectOne('/api/producers/intervals').flush(summary);
+    // The retry refreshes the health indicator too, so the badge recovers with the content.
+    answerHealth();
     await fixture.whenStable();
 
     expect(element().textContent).toContain('Joel Silver');

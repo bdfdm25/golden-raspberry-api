@@ -17,7 +17,7 @@
   </div>
 } @else if (intervals.isLoading()) {
   <p class="mt-8 font-mono text-sm text-muted" role="status">carregando intervalos...</p>
-} @else if (intervals.value(); as summary) {
+} @else if (summary(); as summary) {
   <section class="mt-8 grid gap-4 lg:grid-cols-2" aria-label="Intervalos extremos">
     <app-interval-card label="Menor intervalo" accent="brand" [entries]="summary.min" />
     <app-interval-card label="Maior intervalo" accent="accent" [entries]="summary.max" />

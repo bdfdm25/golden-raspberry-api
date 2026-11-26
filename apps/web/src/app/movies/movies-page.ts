@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { describeApiError } from '../core/api-error';
 import type { MovieFilters } from '../core/movie';
+import { isMoviePage } from '../core/movie-guards';
 import { MoviesApi } from '../core/movies-api';
 import { StatePanel } from '../ui/state-panel';
 import { MoviesTable } from './movies-table';
@@ -20,19 +21,29 @@ export class MoviesPage {
   protected readonly pageSizes = PAGE_SIZES;
   protected readonly filters = signal<MovieFilters>(DEFAULT_FILTERS);
   protected readonly movies = this.api.movies(this.filters);
+  private readonly health = this.api.health;
+
+  // Every read goes through hasValue(): value() throws while the resource is in error.
+  // The shape guard keeps an unexpected 200 out of the template, where it would throw
+  // inside a computed and leave the page frozen on the loading state.
+  protected readonly page = computed(() => {
+    const value = this.movies.hasValue() ? this.movies.value() : undefined;
+    return isMoviePage(value) ? value : undefined;
+  });
 
   protected readonly errorMessage = computed(() => {
     const error = this.movies.error();
-    return error === undefined ? undefined : describeApiError(error);
+    if (error !== undefined) {
+      return describeApiError(error);
+    }
+
+    return this.movies.hasValue() && this.page() === undefined
+      ? 'A API respondeu em um formato que este painel não reconhece.'
+      : undefined;
   });
 
-  // Every read goes through hasValue(): value() throws while the resource is in error.
-  protected readonly pagination = computed(() =>
-    this.movies.hasValue() ? this.movies.value().pagination : undefined,
-  );
-  protected readonly isEmpty = computed(
-    () => this.movies.hasValue() && this.movies.value().data.length === 0,
-  );
+  protected readonly pagination = computed(() => this.page()?.pagination);
+  protected readonly isEmpty = computed(() => this.page()?.data.length === 0);
   protected readonly range = computed(() => {
     const pagination = this.pagination();
     if (pagination === undefined || pagination.total === 0) {
@@ -44,9 +55,13 @@ export class MoviesPage {
     return `${String(first)}-${String(last)}`;
   });
 
-  /** Any filter change resets the page: page 7 of a new filter rarely exists. */
+  /**
+   * Any filter change resets the page: page 7 of a new filter rarely exists.
+   * Non-numeric input never reaches the API: it would travel as year=NaN and come back 400.
+   */
   protected applyYear(value: string): void {
-    const year = value.trim() === '' ? undefined : Number(value);
+    const digits = value.trim();
+    const year = /^\d{1,4}$/.test(digits) ? Number(digits) : undefined;
     this.filters.update((current) => ({ ...current, year, page: 1 }));
   }
 
@@ -57,6 +72,12 @@ export class MoviesPage {
 
   protected applyLimit(value: string): void {
     this.filters.update((current) => ({ ...current, limit: Number(value), page: 1 }));
+  }
+
+  /** The health indicator has to recover too, or the badge keeps saying the API is down. */
+  protected reload(): void {
+    this.movies.reload();
+    this.health.reload();
   }
 
   protected goToPage(page: number): void {
