@@ -144,6 +144,32 @@ O arquivo não é documentação decorativa: `tests/integration/openapi-contract
 documento com `@apidevtools/swagger-parser` e confere cada resposta real contra o schema com `ajv`,
 com `additionalProperties: false`. Campo a mais, campo a menos ou tipo trocado quebram a suíte.
 
+## Formato do CSV
+
+As colunas são localizadas **pelo nome do cabeçalho**, não pela posição, e a comparação ignora caixa
+e espaços. Ou seja, `winner;producers;year;studios;title` funciona tanto quanto a ordem original.
+
+| Coluna      | Obrigatória | Observação                                                  |
+| ----------- | ----------- | ----------------------------------------------------------- |
+| `year`      | sim         | quatro dígitos; qualquer outro valor aborta a carga         |
+| `producers` | sim         | célula vazia é aceita (filme sem produtor registrado)       |
+| `winner`    | sim         | `yes`, `true`, `1`, `no`, `false`, `0` ou vazio             |
+| `title`     | não         | não participa de nenhuma regra; ausente ou vazia gera aviso |
+| `studios`   | não         | idem                                                        |
+
+Delimitador detectado automaticamente entre `;`, `,` e tabulação. BOM, CRLF e linhas em branco são
+tolerados; células entre aspas são respeitadas, inclusive com aspas escapadas (`""`).
+
+**O que aborta a carga** (fail-fast, com o número da linha): arquivo vazio, delimitador não
+reconhecido, ausência de uma coluna obrigatória, ano inválido e valor de `winner` desconhecido.
+
+**O que vira apenas aviso no log** e não impede o uso do dataset: colunas desconhecidas (ignoradas),
+colunas opcionais ausentes ou vazias, e linha com quantidade de colunas diferente do cabeçalho.
+
+**Limites conhecidos:** o arquivo precisa estar em UTF-8 — bytes indecodificáveis produzem um erro
+explícito na inicialização, em vez de texto corrompido; e campos entre aspas que quebram em várias
+linhas não são suportados.
+
 ## Regras de negócio
 
 1. **Produtores** são extraídos da coluna `producers` separando por `,`, `and` e `&`
@@ -187,10 +213,10 @@ Resultado da última execução local (reproduza com `npm run test:coverage` e
 
 | Métrica                    | Resultado         |
 | -------------------------- | ----------------- |
-| Testes                     | 153 (19 arquivos) |
+| Testes                     | 160 (19 arquivos) |
 | Cobertura (linhas/funções) | 100%              |
 | Cobertura (branches)       | 100%              |
-| Mutation score             | 97,86%            |
+| Mutation score             | 98,37%            |
 
 - **Integração** sobe a aplicação real (Express + SQLite em memória) e valida as respostas HTTP, com
   o `Movielist.csv` fornecido e com datasets sintéticos: empates em `min` e `max`, produtor com um

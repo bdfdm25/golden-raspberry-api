@@ -40,6 +40,10 @@ Before declaring any change done: `npm run lint && npm run typecheck && npm run 
   seen and is what the API returns; `normalized_name` only matches duplicates.
 - The query schema is strict on purpose. An unknown query parameter is a 400, never a silent
   full-collection response.
+- CSV columns are located by name, never by position. Only `year`, `producers` and `winner` are
+  required: anything the business rules do not use is tolerated and reported through
+  `ParsedCsv.warnings`, which the ingestion logs. Do not turn a warning into a thrown error unless a
+  business rule depends on the field.
 
 ## Testing rules
 

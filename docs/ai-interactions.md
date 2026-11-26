@@ -223,3 +223,44 @@ npm test              → 153 testes, 19 arquivos
 npm run test:coverage → 100% linhas, 100% funções, 100% branches
 npm run test:mutation → 97,86% (threshold 90)
 ```
+
+## 12. Revisão final contra datasets diferentes
+
+O enunciado avisa que outros conjuntos de dados serão usados na avaliação. Para medir isso em vez de
+supor, foram gerados 30 CSVs de borda e dois de volume (10 mil e 100 mil linhas), todos fora do
+repositório, e cada um foi carregado pelo pipeline real.
+
+Passaram sem ajuste: delimitador `,` e tabulação, CRLF, BOM, header em maiúsculas, linhas em branco,
+espaços extras, aspas escapadas, `winner` em várias grafias, prêmios repetidos no mesmo ano,
+produtor repetido na célula, três grafias do mesmo nome, 100 produtores numa célula, empate com 20
+produtores em cada extremo, dataset sem vencedores e dataset de um filme só.
+
+Volume, com 100 mil linhas: parse 218 ms, ingestão 833 ms, query dos produtores premiados 106 ms,
+página de 20 filmes em 1,6 ms. Via HTTP, `/movies?page=4000` respondeu em 31 ms.
+
+### Cinco correções
+
+| Achado                      | Antes                                  | Depois                          |
+| --------------------------- | -------------------------------------- | ------------------------------- |
+| Ordem das colunas diferente | `Invalid header`, API não sobe         | colunas mapeadas pelo nome      |
+| Coluna extra (`country`)    | `Invalid header`, API não sobe         | ignorada, com aviso no log      |
+| `winner` igual a `1` ou `0` | `Invalid winner "1"`                   | aceitos                         |
+| Arquivo em ISO-8859-1       | carregava texto corrompido, status 200 | erro explícito na inicialização |
+| Título vazio                | abortava o dataset inteiro             | aviso no log, dataset usado     |
+
+A escolha de fundo: **rigor só onde existe regra de negócio**. `year`, `producers` e `winner` são
+obrigatórios e qualquer inconsistência neles aborta a carga; `title` e `studios` não participam de
+nenhuma regra, então ausência, vazio ou coluna a mais viram `ParsedCsv.warnings`, que a ingestão
+registra como `warn` com a linha e a contagem de ocorrências. Nenhum log por linha repetida: os
+avisos são agregados por mensagem.
+
+Na mesma rodada, dois mutantes sobreviventes novos foram tratados na origem: o ternário
+`index === undefined ? '' : fields[index]` era equivalente, porque `header.indexOf` já devolve `-1` e
+`fields[-1]` lê como célula vazia — a condição foi removida em vez de testada; e o contexto do log de
+aviso passou a ser verificado no teste, não só a mensagem.
+
+```
+npm test              → 160 testes, 19 arquivos
+npm run test:coverage → 100% linhas, 100% funções, 100% branches
+npm run test:mutation → 98,37% (era 97,86%)
+```

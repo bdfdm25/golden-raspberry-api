@@ -73,8 +73,8 @@ Duas regras sustentam esse desenho:
 | `app.ts`                                 | Monta o pipeline Express: middlewares, routers e handlers de erro      |
 | `database/connection.ts`                 | Cria o SQLite em memória e aplica o schema DDL                         |
 | `database/movie-repository.ts`           | Único ponto de SQL: inserção em lote, paginação e anos premiados       |
-| `ingestion/movie-ingestion.ts`           | Lê o arquivo, delega o parse e persiste; aborta em qualquer erro       |
-| `csv/movie-csv-parser.ts`                | Detecta delimitador, valida header e converte linhas em `ParsedMovie`  |
+| `ingestion/movie-ingestion.ts`           | Lê o arquivo, delega o parse, loga os avisos e persiste                |
+| `csv/movie-csv-parser.ts`                | Detecta delimitador, mapeia colunas por nome e converte as linhas      |
 | `csv/csv-line-splitter.ts`               | Split de uma linha respeitando aspas duplas e aspas escapadas          |
 | `csv/producer-parser.ts`                 | Separa a célula de produtores em `,`, `and` e `&`                      |
 | `producers/award-interval-calculator.ts` | Regra de negócio: intervalos consecutivos, mínimos e máximos empatados |
