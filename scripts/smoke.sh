@@ -24,4 +24,9 @@ curl -sf "${BASE_URL}/movies?limit=1" | grep -q '"pagination"'
 test "$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}/movies?limit=0")" = "400"
 test "$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}/unknown")" = "404"
 
+# A signal must drain the server and exit 0; a non-zero status here means the
+# shutdown path is broken, which no unit or integration test can observe.
+kill -TERM "${API_PID}"
+wait "${API_PID}"
+
 echo "smoke: ok"

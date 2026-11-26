@@ -34,6 +34,9 @@ export async function startServer(config: AppConfig, logger: Logger): Promise<Ru
     server,
     port,
     close: async () => {
+      // Keep-alive sockets would otherwise hold the server open until they time out.
+      server.closeIdleConnections();
+
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
           if (error) reject(error);

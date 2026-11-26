@@ -6,7 +6,9 @@ const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..'
 const DEFAULT_CSV_PATH = resolve(PROJECT_ROOT, 'data', 'Movielist.csv');
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Defaults to production: the pretty log transport is a development dependency, so a
+  // production install must never be the path that tries to load it.
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
   // 0 is accepted on purpose: it asks the OS for an ephemeral port (used by tests).
   PORT: z.coerce.number().int().min(0).max(65535).default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),

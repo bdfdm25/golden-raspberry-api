@@ -6,7 +6,7 @@ describe('loadConfig', () => {
   it('applies defaults when nothing is set', () => {
     const config = loadConfig({});
 
-    expect(config).toMatchObject({ NODE_ENV: 'development', PORT: 3000, LOG_LEVEL: 'info' });
+    expect(config).toMatchObject({ NODE_ENV: 'production', PORT: 3000, LOG_LEVEL: 'info' });
     expect(config.CSV_PATH).toMatch(/data\/Movielist\.csv$/);
     expect(existsSync(config.CSV_PATH)).toBe(true);
   });

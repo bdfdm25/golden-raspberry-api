@@ -5,14 +5,16 @@ import { HttpError } from '../../src/shared/http-error.js';
 import { createSilentLogger } from '../../src/shared/logger.js';
 import { createCapturingLogger } from '../helpers/capturing-logger.js';
 
-function createResponseDouble() {
+function createResponseDouble(requestId = 'req-1') {
   const response = {
     status: vi.fn(() => response),
     json: vi.fn(() => response),
+    getHeader: vi.fn(() => requestId),
   };
   return response as unknown as Response & {
     status: ReturnType<typeof vi.fn>;
     json: ReturnType<typeof vi.fn>;
+    getHeader: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -50,14 +52,15 @@ describe('createErrorHandler', () => {
     expect(response.json).toHaveBeenCalledWith({ error: { message: 'missing' } });
   });
 
-  it('logs the unexpected error before hiding it', () => {
+  it('logs the unexpected error with its request id before hiding it', () => {
     const { logger, entries } = createCapturingLogger();
-    const response = createResponseDouble();
+    const response = createResponseDouble('abc-123');
 
     createErrorHandler(logger)(new Error('boom'), {} as Request, response, vi.fn());
 
-    expect(entries[0]).toMatchObject({ msg: 'unhandled error' });
+    expect(entries[0]).toMatchObject({ msg: 'unhandled error', requestId: 'abc-123' });
     expect(entries[0]?.err).toMatchObject({ message: 'boom' });
+    expect(response.getHeader).toHaveBeenCalledWith('x-request-id');
   });
 
   it('hides unexpected errors behind a 500', () => {
