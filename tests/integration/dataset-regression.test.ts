@@ -13,7 +13,7 @@ import { DATASET_CSV_PATH } from '../helpers/test-app.js';
 describe('provided dataset', () => {
   it('yields exactly four producers awarded more than once', async () => {
     const repository = new MovieRepository(createInMemoryDatabase());
-    repository.insertMany(parseMovieCsv(await readFile(DATASET_CSV_PATH, 'utf8')));
+    repository.insertMany(parseMovieCsv(await readFile(DATASET_CSV_PATH, 'utf8')).movies);
 
     expect(repository.findRepeatWinnerYears()).toEqual([
       { producer: 'Bo Derek', year: 1984 },
@@ -29,7 +29,7 @@ describe('provided dataset', () => {
 
   it('loads every row of the dataset', async () => {
     const repository = new MovieRepository(createInMemoryDatabase());
-    repository.insertMany(parseMovieCsv(await readFile(DATASET_CSV_PATH, 'utf8')));
+    repository.insertMany(parseMovieCsv(await readFile(DATASET_CSV_PATH, 'utf8')).movies);
 
     expect(repository.count()).toBe(206);
   });

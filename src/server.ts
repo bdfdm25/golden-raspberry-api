@@ -17,7 +17,7 @@ export async function startServer(config: AppConfig, logger: Logger): Promise<Ru
   const database = createInMemoryDatabase();
   const repository = new MovieRepository(database);
 
-  const movies = await ingestMoviesFromCsv(repository, config.CSV_PATH);
+  const movies = await ingestMoviesFromCsv(repository, config.CSV_PATH, logger);
   logger.info({ csvPath: config.CSV_PATH, movies }, 'movies loaded into memory');
 
   const app = createApp({ repository, logger });

@@ -20,7 +20,7 @@ export async function createTestApp(csvPath: string = DATASET_CSV_PATH): Promise
   const database = createInMemoryDatabase();
   const repository = new MovieRepository(database);
 
-  await ingestMoviesFromCsv(repository, csvPath);
+  await ingestMoviesFromCsv(repository, csvPath, createSilentLogger());
 
   return {
     app: createApp({ repository, logger: createSilentLogger() }),
