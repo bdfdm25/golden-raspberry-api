@@ -1,0 +1,150 @@
+# Registro de interações com IA
+
+Ferramenta: **Claude Code** (modelo Claude Opus 5), sessão única em 25/11/2026.
+Formato: registro curado — prompts relevantes, decisões, divergências e código descartado.
+As instruções permanentes dadas ao agente estão em [`AGENTS.md`](../AGENTS.md).
+
+## 1. Prompt inicial
+
+Pedido do autor, resumido a partir da conversa inicial:
+
+> Precisamos escrever uma solução técnica: uma API RESTful que carregue a lista de indicados e
+> vencedores da categoria Pior Filme do Golden Raspberry Awards em um banco de dados embarcado em
+> memória e exponha o produtor com maior e com menor intervalo entre prêmios consecutivos.
+> Precisamos garantir a qualidade do código, considerando princípios de Clean Code e Engenharia de
+> Software, mas sem over-engineering. Apesar do documento de requisitos definir que devem ser
+> implementados apenas testes de integração, acredito que seja válido a implementação de testes
+> unitários e de mutação — vamos manter um percentual de pelo menos 90% de cobertura em ambos.
+
+O agente leu o documento de requisitos fornecido junto ao pedido (não versionado aqui) e o
+`Movielist.csv` antes de responder.
+
+### Divergência registrada
+
+O agente apontou dois riscos antes de iniciar:
+
+1. Os requisitos dizem **"somente testes de integração"**. Testes unitários e de mutação vão além
+   da letra do documento. Decisão tomada: manter integração como fonte de verdade da API e usar
+   unitários apenas onde o teste HTTP é indireto demais (parser de CSV, cálculo de intervalos,
+   validações).
+2. Mutação a 90% em código de infraestrutura (bootstrap, logger, conexão) tende a produzir testes
+   sem valor. Decisão tomada: `stryker.config.json` exclui `main.ts`, `server.ts`, `logger.ts` e
+   `connection.ts` da mutação; o restante do código responde pelo threshold de 90%.
+
+Ambos os pontos foram aceitos pelo autor do projeto.
+
+## 2. Perguntas de clarificação (12, antes de qualquer linha de código)
+
+| Pergunta                    | Decisão                                                             |
+| --------------------------- | ------------------------------------------------------------------- |
+| Stack                       | Express 5 + TypeScript (menos boilerplate que Nest para 2 rotas)    |
+| Persistência                | `better-sqlite3` com SQL explícito, sem ORM                         |
+| Arquitetura                 | Camadas simples: rota → repositório + domínio puro                  |
+| Testes                      | Vitest + Supertest + Stryker                                        |
+| Onde calcular os intervalos | SQL seleciona os anos premiados; domínio puro calcula os intervalos |
+| Escopo de endpoints         | `/producers/intervals` + `/movies` (paginado) + `/health`           |
+| Origem do CSV               | `CSV_PATH` configurável, com default no repositório                 |
+| Registro de IA              | Este documento + `AGENTS.md`                                        |
+| Observabilidade             | Logs estruturados + `/health` (sem OpenTelemetry)                   |
+| Tooling                     | ESLint + Prettier + husky + GitHub Actions                          |
+| Docker                      | Não incluir — SQLite em memória não justifica                       |
+| Parsing de produtores       | Separadores `,`, `and` e `&`                                        |
+| Empates em min/max          | Retornar todos os produtores empatados                              |
+| Linha inválida no CSV       | Fail-fast: aborta a inicialização                                   |
+
+## 3. Decisões técnicas durante a implementação
+
+- **Query única com CTE** para os anos premiados de produtores com mais de um prêmio. O SQL filtra e
+  deduplica; o cálculo dos intervalos fica em função pura, testável sem banco.
+- **Deduplicação de anos** (`SELECT DISTINCT` + `Set` no domínio): dois prêmios do mesmo produtor no
+  mesmo ano não podem gerar intervalo zero.
+- **`PORT=0` aceito**: permite que o SO escolha uma porta efêmera, o que tornou possível testar
+  `startServer` de verdade em vez de excluí-lo da cobertura.
+- **`exactOptionalPropertyTypes`** ligado: o tipo de query params passou a ser derivado do schema zod
+  (`z.infer`) em vez de duplicado à mão.
+- **ESLint**: `tseslint.config()` está deprecado na versão instalada; migrado para `defineConfig`.
+  Regras `no-unsafe-*` desligadas **apenas** em `tests/`, onde corpos de resposta HTTP e test doubles
+  são naturalmente não tipados.
+
+## 4. Código removido por evidência do teste de mutação
+
+A primeira execução do Stryker ficou em **85,75%**. A análise dos mutantes sobreviventes revelou
+código morto, que foi removido em vez de "testado":
+
+| Código                                            | Por que saiu                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Remoção manual de BOM no parser                   | `String.prototype.trim()` já remove `U+FEFF`                                                           |
+| `if (rows.length === 0) return []` no repositório | SQLite resolve `IN ()` sem erro; era guarda inútil                                                     |
+| `if (intervals.length === 0)` no calculador       | `Math.min()`/`Math.max()` de lista vazia já produzem `{min:[],max:[]}`                                 |
+| Desempate por `previousWin` no `sort`             | Inalcançável: `Array.sort` é estável e os intervalos de um mesmo produtor já saem em ordem cronológica |
+
+Os demais mutantes viraram **testes novos** com asserções reais: mensagens de erro exatas, `cause`
+preservada no erro de leitura do CSV, conteúdo do log de requisição (incluindo limites plausíveis
+para `durationMs`), ausência do header `x-powered-by`, `name` das classes de erro, e todos os
+valores aceitos em `LOG_LEVEL`/`NODE_ENV`.
+
+Resultado final: **97,44%** de mutation score. Os nove sobreviventes restantes foram analisados
+individualmente: são equivalentes (ex.: `router.get('/')` → `router.get('')`, que o Express trata da
+mesma forma) ou afetam apenas desempenho (o cache de ids de produtores e o retorno antecipado para
+páginas vazias). Nenhum comentário `// Stryker disable` foi usado para inflar a métrica.
+
+## 5. O que foi deliberadamente descartado
+
+| Descartado                  | Motivo                                                            |
+| --------------------------- | ----------------------------------------------------------------- |
+| NestJS                      | DI e módulos não pagam o próprio custo em duas rotas              |
+| Clean Architecture completa | Use cases, ports e mappers seriam cerimônia sobre uma função pura |
+| ORM (TypeORM/Prisma)        | Esconderia justamente o SQL que a solução deve demonstrar         |
+| OpenTelemetry / Prometheus  | Desproporcional ao escopo; logs estruturados cobrem o requisito   |
+| Docker                      | `npm ci && npm start` basta; banco é em memória                   |
+| CRUD de filmes              | Fora do escopo definido nos requisitos                            |
+
+## 6. Revisão final do próprio código
+
+Na releitura de todos os arquivos, dois pontos no repositório foram corrigidos:
+
+- a ingestão fazia dois statements por produtor (`INSERT ... DO NOTHING` seguido de `SELECT id`);
+  virou um único `INSERT ... ON CONFLICT DO UPDATE ... RETURNING id` com cache em memória dos ids
+  já resolvidos — relevante para volumes grandes de dados;
+- o retorno antecipado para páginas vazias foi restaurado: sem ele o código dependia de o SQLite
+  aceitar `IN ()`, um detalhe de implementação do SGBD.
+
+## 7. Newman avaliado e recusado como camada de teste
+
+Pergunta do autor: aplicar Newman/Postman para os testes de integração, como feito no projeto
+`expense-tracker`. A recomendação do agente foi **não**, com três motivos concretos:
+
+1. **Contexto diferente.** Lá o job do Newman sobe Postgres como service, roda migrations e espera a
+   API ficar pronta — ele valida wiring de deploy. Aqui o banco é em memória, não há auth nem
+   serviço externo, e `tests/integration/server.test.ts` já faz uma chamada HTTP real em porta
+   efêmera.
+2. **Duplicação de asserções.** As regras (empate, min/max, 400 em query inválida) passariam a
+   existir em dois lugares com formatos diferentes, divergindo no primeiro refactor.
+3. **Artefato pior para revisão.** Asserção de collection é JavaScript dentro de string JSON: sem
+   tipo, sem lint e invisível para o Stryker — testes migrados para lá deixariam de matar mutantes.
+
+A lacuna real que a pergunta expôs era outra: **o artefato compilado nunca era executado**. O CI
+rodava `npm run build` e descartava o `dist/`. Se a resolução de `CSV_PATH` quebrasse no output
+compilado, nada no pipeline apontaria o erro — ele apareceria só na primeira execução real.
+
+Decisões tomadas a partir disso:
+
+- `scripts/smoke.sh` executa `dist/main.js` e valida os endpoints por HTTP real; roda no CI dentro do
+  job `quality` e localmente via `npm run smoke`.
+- `openapi.yaml` na raiz entrega a quem consome a API o que a collection entregaria (importável no
+  Postman e no Insomnia), com a vantagem de ser verificável: um teste de integração valida o
+  documento e confere cada resposta contra os schemas, com `additionalProperties: false`.
+
+## 8. Verificação final executada
+
+```
+npm run lint          → sem erros
+npm run typecheck     → sem erros
+npm test              → 132 testes, 17 arquivos, todos passando
+npm run test:coverage → 100% linhas, 100% funções, 99,30% branches
+npm run test:mutation → 97,44% (threshold 90%)
+npm run smoke         → smoke: ok (dist/ compilado, endpoints por HTTP real)
+```
+
+Além disso, a API compilada foi executada e validada manualmente via `curl`
+(`/producers/intervals`, `/movies`, `/health` e um caso de erro 400).
