@@ -3,7 +3,9 @@
   "packageManager": "npm",
   "testRunner": "vitest",
   "reporters": ["html", "clear-text", "progress"],
-  "htmlReporter": { "fileName": "reports/mutation/index.html" },
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
   "coverageAnalysis": "perTest",
   "mutate": [
     "src/**/*.ts",
@@ -12,5 +14,9 @@
     "!src/shared/logger.ts",
     "!src/database/connection.ts"
   ],
-  "thresholds": { "high": 95, "low": 90, "break": 90 }
+  "thresholds": {
+    "high": 98,
+    "low": 95,
+    "break": 95
+  }
 }

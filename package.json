@@ -1,15 +1,16 @@
 {
   "name": "golden-raspberry-api",
   "version": "1.0.0",
+  "private": true,
   "description": "RESTful API for Golden Raspberry Awards Worst Picture nominees and winners",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.9"
   },
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "NODE_ENV=development tsx watch --env-file-if-exists=.env src/main.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/main.js",
+    "start": "node --env-file-if-exists=.env dist/main.js",
     "smoke": "PORT=3001 ./scripts/smoke.sh",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
@@ -36,7 +37,7 @@
     "@stryker-mutator/vitest-runner": "^9.0.1",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.0",
-    "@types/node": "^24.0.0",
+    "@types/node": "^22.0.0",
     "@types/supertest": "^6.0.2",
     "@vitest/coverage-v8": "^3.2.4",
     "ajv": "^8.20.0",
@@ -56,5 +57,6 @@
   "lint-staged": {
     "*.{ts,js,json,md}": "prettier --write",
     "*.ts": "eslint --fix"
-  }
+  },
+  "packageManager": "npm@10.9.2"
 }
