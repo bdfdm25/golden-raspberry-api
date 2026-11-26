@@ -18,6 +18,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+      - name: Smoke test the compiled artifact
+        run: npm run smoke
       - run: npm run test:coverage
 
   mutation:

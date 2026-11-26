@@ -1,0 +1,158 @@
+openapi: 3.0.3
+info:
+  title: Golden Raspberry Awards API
+  version: 1.0.0
+  description: |
+    Reads the Golden Raspberry Awards "Worst Picture" CSV into an in-memory database at startup and
+    exposes the intervals between consecutive awards of each producer.
+servers:
+  - url: http://localhost:3000
+    description: Local
+tags:
+  - name: Producers
+  - name: Movies
+  - name: Health
+paths:
+  /producers/intervals:
+    get:
+      tags: [Producers]
+      summary: Shortest and longest intervals between consecutive awards
+      description: |
+        Only producers awarded at least twice are considered. Every producer tied on the extreme
+        interval is returned, sorted by name.
+      operationId: getProducerAwardIntervals
+      responses:
+        '200':
+          description: Award intervals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AwardIntervalSummary'
+  /movies:
+    get:
+      tags: [Movies]
+      summary: Paginated list of the movies loaded from the CSV
+      operationId: listMovies
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 9999 }
+        - name: winner
+          in: query
+          required: false
+          schema: { type: string, enum: ['true', 'false'] }
+      responses:
+        '200':
+          description: A page of movies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoviePage'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe and number of movies loaded at startup
+      operationId: getHealth
+      responses:
+        '200':
+          description: Application status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+components:
+  schemas:
+    ProducerAwardInterval:
+      type: object
+      additionalProperties: false
+      required: [producer, interval, previousWin, followingWin]
+      properties:
+        producer: { type: string, example: Joel Silver }
+        interval: { type: integer, minimum: 0, example: 1 }
+        previousWin: { type: integer, example: 1990 }
+        followingWin: { type: integer, example: 1991 }
+    AwardIntervalSummary:
+      type: object
+      additionalProperties: false
+      required: [min, max]
+      properties:
+        min:
+          type: array
+          items: { $ref: '#/components/schemas/ProducerAwardInterval' }
+        max:
+          type: array
+          items: { $ref: '#/components/schemas/ProducerAwardInterval' }
+    Movie:
+      type: object
+      additionalProperties: false
+      required: [id, year, title, studios, producers, winner]
+      properties:
+        id: { type: integer, example: 1 }
+        year: { type: integer, example: 1980 }
+        title: { type: string, example: Can't Stop the Music }
+        studios: { type: string, example: Associated Film Distribution }
+        producers:
+          type: array
+          items: { type: string }
+          example: [Allan Carr]
+        winner: { type: boolean, example: true }
+    Pagination:
+      type: object
+      additionalProperties: false
+      required: [page, limit, total, totalPages]
+      properties:
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+    MoviePage:
+      type: object
+      additionalProperties: false
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Movie' }
+        pagination: { $ref: '#/components/schemas/Pagination' }
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, movies]
+      properties:
+        status: { type: string, enum: [ok] }
+        movies: { type: integer, minimum: 0 }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [message]
+          properties:
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [field, message]
+                properties:
+                  field: { type: string }
+                  message: { type: string }
