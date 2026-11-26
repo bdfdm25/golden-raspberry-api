@@ -2,34 +2,76 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feat/**']
   pull_request:
 
 jobs:
-  quality:
+  api:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run lint
+        working-directory: .
       - run: npm run format:check
+        working-directory: .
+      - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
       - name: Smoke test the compiled artifact
         run: npm run smoke
       - run: npm run test:coverage
 
-  mutation:
+  web:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+        working-directory: .
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run build
+
+  mutation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+        working-directory: .
       - run: npm run test:mutation
+
+  stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the compose stack
+        run: docker compose up -d --build --wait
+      - name: The dashboard is served and proxies the API
+        run: |
+          curl -sf http://localhost:8080/ | grep -q 'Golden Raspberry'
+          curl -sf http://localhost:8080/api/health | grep -q '"status":"ok"'
+          curl -sf http://localhost:8080/api/producers/intervals | grep -q '"min"'
+      - name: Stop the stack
+        if: always()
+        run: docker compose down
