@@ -17,7 +17,20 @@ describe('parseProducers', () => {
     expect(parseProducers(raw)).toEqual(expected);
   });
 
-  it('does not split names that merely contain "and"', () => {
+  it('splits on "and" as a whole word, never inside a word', () => {
     expect(parseProducers('Alexander Sandro')).toEqual(['Alexander Sandro']);
+  });
+
+  // Known limit, asserted on purpose: "and" inside a jointly credited name is
+  // indistinguishable from "and" as a separator. The provided dataset has one
+  // such row ("Sid and Marty Krofft and Jimmy Miller"), which yields "Sid".
+  // Splitting is still the right default: a co-credited producer must earn the
+  // award individually, as Joel Silver does for "Steven Perry and Joel Silver".
+  it('also splits names that are credited jointly', () => {
+    expect(parseProducers('Sid and Marty Krofft and Jimmy Miller')).toEqual([
+      'Sid',
+      'Marty Krofft',
+      'Jimmy Miller',
+    ]);
   });
 });

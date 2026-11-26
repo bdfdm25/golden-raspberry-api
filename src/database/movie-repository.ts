@@ -1,4 +1,5 @@
 import type { ParsedMovie } from '../csv/movie-csv-parser.js';
+import { normalizeProducerName } from '../producers/producer-identity.js';
 import type { AppDatabase } from './connection.js';
 
 export interface Movie {
@@ -71,23 +72,26 @@ export class MovieRepository {
       'INSERT INTO movies (year, title, studios, winner) VALUES (?, ?, ?, ?)',
     );
     const upsertProducer = this.database.prepare(
-      `INSERT INTO producers (name) VALUES (?)
-       ON CONFLICT (name) DO UPDATE SET name = excluded.name
+      `INSERT INTO producers (name, normalized_name) VALUES (?, ?)
+       ON CONFLICT (normalized_name) DO UPDATE SET normalized_name = excluded.normalized_name
        RETURNING id`,
     );
     const linkProducer = this.database.prepare(
       'INSERT INTO movie_producers (movie_id, producer_id) VALUES (?, ?) ON CONFLICT DO NOTHING',
     );
 
+    // Keyed by the normalized name, so name variants resolve to the same producer.
+    // The first spelling seen is the one kept for display.
     const producerIds = new Map<string, number>();
     const resolveProducerId = (name: string): number => {
-      const cached = producerIds.get(name);
+      const key = normalizeProducerName(name);
+      const cached = producerIds.get(key);
       if (cached !== undefined) {
         return cached;
       }
 
-      const { id } = upsertProducer.get(name) as { id: number };
-      producerIds.set(name, id);
+      const { id } = upsertProducer.get(name, key) as { id: number };
+      producerIds.set(key, id);
       return id;
     };
 

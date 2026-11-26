@@ -12,8 +12,9 @@ const SCHEMA = `
   );
 
   CREATE TABLE producers (
-    id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT    NOT NULL UNIQUE
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT    NOT NULL,
+    normalized_name TEXT    NOT NULL UNIQUE
   );
 
   CREATE TABLE movie_producers (

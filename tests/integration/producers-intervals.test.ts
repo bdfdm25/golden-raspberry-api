@@ -66,6 +66,28 @@ describe('GET /producers/intervals', () => {
     });
   });
 
+  it('treats case and accent variants of a name as the same producer', async () => {
+    const csvPath = await writeTemporaryCsv(
+      buildCsv([
+        '1985;Movie A;Studio;Lorenzo di Bonaventura;yes',
+        '1990;Movie B;Studio;LORENZO DI BONAVENTURA;yes',
+        '1995;Movie C;Studio;José Silva;yes',
+        '1999;Movie D;Studio;JOSE SILVA;yes',
+      ]),
+    );
+    testApp = await createTestApp(csvPath);
+
+    const { body } = await request(testApp.app).get('/producers/intervals').expect(200);
+
+    // The spelling kept is the first one seen, not the normalized key.
+    expect(body).toEqual({
+      min: [{ producer: 'José Silva', interval: 4, previousWin: 1995, followingWin: 1999 }],
+      max: [
+        { producer: 'Lorenzo di Bonaventura', interval: 5, previousWin: 1985, followingWin: 1990 },
+      ],
+    });
+  });
+
   it('returns empty lists when no producer has won twice', async () => {
     const csvPath = await writeTemporaryCsv(
       buildCsv(['2000;Movie A;Studio;Producer One;yes', '2001;Movie B;Studio;Producer Two;']),
