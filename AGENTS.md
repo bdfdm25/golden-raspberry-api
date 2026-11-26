@@ -4,15 +4,21 @@ Instructions for AI agents working on this repository.
 
 ## What this project is
 
-RESTful API that loads the Golden Raspberry Awards "Worst Picture" CSV into an in-memory SQLite
-database at startup and exposes the award intervals of each producer. Correctness and code quality
-matter more than feature count.
+An npm workspace with two apps. `apps/api` is the deliverable: a RESTful API that loads the Golden
+Raspberry Awards "Worst Picture" CSV into an in-memory SQLite database at startup and exposes the
+award intervals of each producer. `apps/web` is an Angular dashboard that consumes it, added on the
+`feat/fullstack-dashboard` branch. Correctness and code quality matter more than feature count.
+
+Run install and Prettier from the repository root; everything else from inside the app you are
+touching.
 
 ## Commands
 
+All API commands below run inside `apps/api`:
+
 | Task        | Command                 |
 | ----------- | ----------------------- |
-| Install     | `npm ci`                |
+| Install     | `npm ci` (repo root)    |
 | Run (watch) | `npm run dev`           |
 | Build       | `npm run build`         |
 | Tests       | `npm test`              |
@@ -69,3 +75,18 @@ Before declaring any change done: `npm run lint && npm run typecheck && npm run 
 - Do not run `git commit` or `git push` — report what changed and let the human decide.
 - The dataset in `data/` is sample input only; the API must work with any CSV that has the same
   columns. Never hardcode anything specific to the sample data in `src/`.
+
+## apps/web
+
+- Angular 22, zoneless, standalone components, signals everywhere. No `zone.js`, no `subscribe`, no
+  `async` pipe.
+- Data comes from `httpResource`. **Always guard a read with `hasValue()`**: `resource.value()`
+  throws while the resource is in an error state.
+- Tailwind only, with the design tokens declared as `@theme` in `src/styles.css`. No component
+  library, no custom CSS files.
+- Tests use `TestBed` plus `HttpTestingController`, flush-first: create the component, call
+  `detectChanges()`, answer the pending request, and only then `await fixture.whenStable()`.
+  Awaiting stability before flushing hangs, because the pending request keeps the app unstable.
+- Coverage thresholds (90%) live in `vitest-base.config.mts`, loaded through `angular.json`.
+- The API has no CORS headers on purpose: the dev server proxies `/api`, and in Docker nginx does.
+  Never add CORS to the API to make the frontend work.
