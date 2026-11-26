@@ -192,7 +192,34 @@ que fixa os quatro produtores com dois prêmios do dataset fornecido.
 npm run lint          → sem erros
 npm run typecheck     → sem erros
 npm test              → 151 testes, 19 arquivos, todos passando
-npm run test:coverage → 100% linhas, 100% funções, 99,31% branches
+npm run test:coverage → 100% linhas, 100% funções, 99,31% branches (ver seção 11)
 npm run test:mutation → 97,86% (threshold 90%), 8 sobreviventes equivalentes
 npm run smoke         → smoke: ok
+```
+
+## 11. Defeito encontrado na validação manual
+
+Ao subir a API para validar os endpoints no Postman, o processo registrava `api listening` e morria
+em seguida, **sem erro e com código de saída 0**. A porta 3000 estava ocupada por um container de
+outro projeto.
+
+Causa: `listen()` resolvia a promise no evento `listening` e registrava o handler de erro com
+`once`, consumido pela própria promise. Num bind dual-stack o socket IPv6 sobe, dispara `listening`,
+e o `EADDRINUSE` do lado IPv4 chega **depois** — com a promise já resolvida, `reject` virava no-op,
+o erro era engolido e o processo saía limpo como se a API estivesse no ar.
+
+Correção em `src/server.ts`: o handler de erro passou a ser permanente. Depois que o servidor está
+escutando, um erro vira log `fatal` e `process.exitCode = 1`; antes disso, continua rejeitando a
+inicialização. O log `api listening` também passou a depender de `server.listening`: anunciar uma
+porta que já não atende era justamente a linha que induzia ao erro.
+
+Dois testes entraram junto. O primeiro ocupa uma porta e tenta subir outra instância nela,
+aceitando tanto rejeição quanto erro tardio — o que não se aceita é silêncio. O segundo emite o erro
+no servidor já aberto e exige o log `fatal` e o código de saída. Sem a correção, o primeiro passa em
+silêncio e o segundo falha.
+
+```
+npm test              → 153 testes, 19 arquivos
+npm run test:coverage → 100% linhas, 100% funções, 100% branches
+npm run test:mutation → 97,86% (threshold 90)
 ```

@@ -187,9 +187,9 @@ Resultado da última execução local (reproduza com `npm run test:coverage` e
 
 | Métrica                    | Resultado         |
 | -------------------------- | ----------------- |
-| Testes                     | 151 (19 arquivos) |
+| Testes                     | 153 (19 arquivos) |
 | Cobertura (linhas/funções) | 100%              |
-| Cobertura (branches)       | 99,31%            |
+| Cobertura (branches)       | 100%              |
 | Mutation score             | 97,86%            |
 
 - **Integração** sobe a aplicação real (Express + SQLite em memória) e valida as respostas HTTP, com

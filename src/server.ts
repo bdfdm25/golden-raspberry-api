@@ -21,10 +21,14 @@ export async function startServer(config: AppConfig, logger: Logger): Promise<Ru
   logger.info({ csvPath: config.CSV_PATH, movies }, 'movies loaded into memory');
 
   const app = createApp({ repository, logger });
-  const server = await listen(app, config.PORT);
+  const server = await listen(app, config.PORT, logger);
   const port = resolvePort(server.address(), config.PORT);
 
-  logger.info({ port }, 'api listening');
+  // A late bind error can close the server before this line, and announcing a port that
+  // is not serving is exactly the misleading log this guard exists to avoid.
+  if (server.listening) {
+    logger.info({ port }, 'api listening');
+  }
 
   return {
     server,
@@ -45,11 +49,29 @@ export function resolvePort(address: AddressInfo | string | null, fallback: numb
   return typeof address === 'object' && address !== null ? address.port : fallback;
 }
 
-function listen(app: ReturnType<typeof createApp>, port: number): Promise<Server> {
+/**
+ * The error can also arrive after 'listening' — a dual-stack bind reports success for
+ * the IPv6 socket and fails for the IPv4 one when the port is already taken. The
+ * handler therefore stays attached: dropping it leaves the server dead while the
+ * process exits with code 0, as if the API were up.
+ */
+function listen(app: ReturnType<typeof createApp>, port: number, logger: Logger): Promise<Server> {
   return new Promise((resolve, reject) => {
+    let listening = false;
+
     const server = app.listen(port, () => {
+      listening = true;
       resolve(server);
     });
-    server.once('error', reject);
+
+    server.on('error', (error: Error) => {
+      if (listening) {
+        logger.fatal({ err: error }, 'the http server stopped serving');
+        process.exitCode = 1;
+      }
+
+      // Already settled once the server is listening, so this only rejects a startup failure.
+      reject(error);
+    });
   });
 }
