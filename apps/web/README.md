@@ -1,6 +1,7 @@
 # Dashboard
 
-Angular 22 consumindo a API do desafio. Duas telas: intervalos de premiação e listagem de filmes.
+Angular 22 consumindo a API deste repositório. Duas telas: intervalos de premiação e listagem de
+filmes.
 
 ```bash
 npm start           # http://localhost:4200 (proxy de /api para http://localhost:3000)

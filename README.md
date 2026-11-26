@@ -1,8 +1,7 @@
 # Golden Raspberry Awards — API e dashboard
 
-Monorepo com a API do desafio e um dashboard Angular que a consome. A entrega do desafio é a API,
-que vive sozinha na branch `main`; esta branch acrescenta o frontend para demonstrar o conjunto
-fullstack.
+Monorepo com a API e um dashboard Angular que a consome. A API vive sozinha na branch `main`; esta
+branch acrescenta o frontend.
 
 [![CI](https://github.com/bdfdm25/golden-raspberry-api/actions/workflows/ci.yml/badge.svg)](https://github.com/bdfdm25/golden-raspberry-api/actions/workflows/ci.yml)
 

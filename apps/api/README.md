@@ -198,7 +198,8 @@ linhas não são suportados.
 
 ## Testes
 
-O desafio pede apenas testes de integração. Unitários e mutação entraram por decisão de projeto,
+Os requisitos pedem apenas testes de integração. Unitários e mutação entraram por decisão de
+projeto,
 para cobrir o que o teste HTTP alcança só de forma indireta e para medir se as asserções realmente
 pegam defeitos — não para substituir a camada exigida.
 
